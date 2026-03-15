@@ -1,0 +1,55 @@
+# =============================================================================
+# .gitignore — Ficheiros ignorados pelo Git
+# =============================================================================
+
+# Variáveis de ambiente (NUNCA no git!)
+.env
+.env.local
+.env.*.local
+
+# Logs
+/log/*
+!/log/.keep
+
+# Temporários
+/tmp/*
+!/tmp/.keep
+
+# Gems instaladas localmente
+/vendor/bundle
+
+# Node modules
+/node_modules
+
+# Assets compilados
+/public/assets
+/public/packs
+/public/packs-test
+
+# Storage (uploads, etc.)
+/storage/*
+!/storage/.keep
+
+# Boot
+/tmp/pids/*.pid
+
+# Setup flag
+setupcomplete
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# Coverage
+/coverage
+
+# Byebug history
+.byebug_history
+
+# Yarn integrity
+.yarn-integrity

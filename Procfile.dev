@@ -1,0 +1,13 @@
+# =============================================================================
+# Procfile.dev — Processos para desenvolvimento
+# Uso: foreman start -f Procfile.dev
+# Ou com overmind: overmind start -f Procfile.dev
+#
+# Dentro do Docker, os processos são iniciados individualmente.
+# Este Procfile é útil para desenvolvimento LOCAL sem Docker.
+# =============================================================================
+
+web:    bundle exec rails server -b 0.0.0.0 -p 3000
+worker: bundle exec sidekiq -C config/sidekiq.yml
+css:    yarn build:css --watch
+js:     yarn build --watch

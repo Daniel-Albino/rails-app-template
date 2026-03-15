@@ -1,0 +1,70 @@
+# =============================================================================
+# .rubocop.yml
+# Configuração do RuboCop — linting e estilo de código Ruby.
+# =============================================================================
+
+require:
+  - rubocop-rails
+  - rubocop-rspec
+
+AllCops:
+  NewCops: enable
+  TargetRubyVersion: 3.3
+  Exclude:
+    - "db/schema.rb"
+    - "db/migrate/**/*"
+    - "bin/**/*"
+    - "vendor/**/*"
+    - "node_modules/**/*"
+    - ".git/**/*"
+
+# Tamanho máximo de linha
+Layout/LineLength:
+  Max: 120
+  Exclude:
+    - "config/routes.rb"
+
+# Comprimento de métodos
+Metrics/MethodLength:
+  Max: 20
+  Exclude:
+    - "spec/**/*"
+
+# Comprimento de blocos
+Metrics/BlockLength:
+  Exclude:
+    - "spec/**/*"
+    - "config/routes.rb"
+    - "config/environments/**/*"
+    - "Gemfile"
+
+# Comprimento de classes
+Metrics/ClassLength:
+  Max: 200
+
+# Documentation opcional
+Style/Documentation:
+  Enabled: false
+
+# Frozen string literal — desactivado para Rails
+Style/FrozenStringLiteralComment:
+  Enabled: false
+
+# Permite usar pp e puts em desenvolvimento/debug
+Style/SpecialGlobalVars:
+  Enabled: true
+
+# Rails específico
+Rails/Output:
+  Exclude:
+    - "db/seeds.rb"
+
+# RSpec
+RSpec/ExampleLength:
+  Max: 30
+
+RSpec/MultipleExpectations:
+  Max: 5
+
+RSpec/NestedGroups:
+  Max: 4

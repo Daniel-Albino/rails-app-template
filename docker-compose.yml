@@ -1,0 +1,127 @@
+# =============================================================================
+# docker-compose.yml — Orquestração dos serviços para DESENVOLVIMENTO
+# Para produção, utilizar docker-compose.prod.yml ou override.
+# =============================================================================
+
+name: my_app
+
+services:
+  # ---------------------------------------------------------------------------
+  # Web — Rails Application
+  # ---------------------------------------------------------------------------
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development          # Usa o stage de desenvolvimento
+    image: my_app:development
+    container_name: my_app_web
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    volumes:
+      # Hot reload: monta o código local dentro do container
+      - .:/app
+      # Gems persistentes fora do volume do código (evita conflitos)
+      - bundle_cache:/usr/local/bundle
+      # Node modules persistentes
+      - node_modules_cache:/app/node_modules
+    env_file:
+      - .env
+      - docker/environments/development.env
+    environment:
+      - RAILS_ENV=development
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-my_app_development}
+      - REDIS_URL=redis://redis:6379/0
+    stdin_open: true   # Permite `rails console` interativo
+    tty: true          # Necessário para TTY (debugging, byebug, etc.)
+    networks:
+      - my_app_network
+
+  # ---------------------------------------------------------------------------
+  # DB — PostgreSQL
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    container_name: my_app_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-my_app_development}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d   # Scripts de init opcionais
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"    # Exposto para ferramentas locais (TablePlus, DBeaver, etc.)
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-my_app_development}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - my_app_network
+
+  # ---------------------------------------------------------------------------
+  # Redis — Cache e Action Cable
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: my_app_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"       # Exposto para inspecção local (RedisInsight, etc.)
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - my_app_network
+
+  # ---------------------------------------------------------------------------
+  # Mailpit — Email testing em desenvolvimento (não vai para produção)
+  # Aceder via http://localhost:8025
+  # ---------------------------------------------------------------------------
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: my_app_mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    networks:
+      - my_app_network
+
+# =============================================================================
+# Volumes persistentes
+# =============================================================================
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  bundle_cache:
+    driver: local
+  node_modules_cache:
+    driver: local
+
+# =============================================================================
+# Rede interna
+# =============================================================================
+networks:
+  my_app_network:
+    driver: bridge
