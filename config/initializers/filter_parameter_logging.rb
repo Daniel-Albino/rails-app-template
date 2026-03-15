@@ -3,24 +3,24 @@
 # Oculta parâmetros sensíveis dos logs Rails.
 # =============================================================================
 
-Rails.application.config.filter_parameters += [
-  :passw,
-  :password,
-  :password_confirmation,
-  :secret,
-  :token,
-  :_key,
-  :crypt,
-  :salt,
-  :certificate,
-  :otp,
-  :ssn,
-  :cvv,
-  :cvc,
-  :credit_card,
-  :card_number,
-  :access_token,
-  :refresh_token,
-  :api_key,
-  :secret_key
+Rails.application.config.filter_parameters += %i[
+  passw
+  password
+  password_confirmation
+  secret
+  token
+  _key
+  crypt
+  salt
+  certificate
+  otp
+  ssn
+  cvv
+  cvc
+  credit_card
+  card_number
+  access_token
+  refresh_token
+  api_key
+  secret_key
 ]

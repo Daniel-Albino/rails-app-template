@@ -15,7 +15,7 @@ require "shoulda/matchers"
 require "database_cleaner/active_record"
 
 # Carrega support files
-Dir[Rails.root.join("spec/support/**/*.rb")].sort.each { |f| require f }
+Dir[Rails.root.join("spec/support/**/*.rb")].each { |f| require f }
 
 # Verifica migrações pendentes
 begin
@@ -25,8 +25,8 @@ rescue ActiveRecord::PendingMigrationError => e
 end
 
 RSpec.configure do |config|
-  config.fixture_paths = ["#{::Rails.root}/spec/fixtures"]
-  config.use_transactional_fixtures = false  # Gerido pelo DatabaseCleaner
+  config.fixture_paths = ["#{Rails.root}/spec/fixtures"]
+  config.use_transactional_fixtures = false # Gerido pelo DatabaseCleaner
   config.infer_spec_type_from_file_location!
   config.filter_rails_from_backtrace!
 

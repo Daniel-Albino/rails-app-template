@@ -32,7 +32,7 @@ namespace :docker do
     begin
       ActiveRecord::Base.connection.execute("SELECT 1")
       puts "  [OK] PostgreSQL — conectado"
-    rescue => e
+    rescue StandardError => e
       puts "  [FAIL] PostgreSQL — #{e.message}"
     end
 
@@ -41,7 +41,7 @@ namespace :docker do
       redis = Redis.new(url: ENV.fetch("REDIS_URL", "redis://localhost:6379/0"))
       redis.ping
       puts "  [OK] Redis — conectado"
-    rescue => e
+    rescue StandardError => e
       puts "  [FAIL] Redis — #{e.message}"
     end
 

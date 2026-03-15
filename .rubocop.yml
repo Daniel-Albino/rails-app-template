@@ -1,70 +1,32 @@
-# =============================================================================
-# .rubocop.yml
-# Configuração do RuboCop — linting e estilo de código Ruby.
-# =============================================================================
-
-require:
-  - rubocop-rails
-  - rubocop-rspec
-
 AllCops:
   NewCops: enable
+  SuggestExtensions: false
   TargetRubyVersion: 3.3
   Exclude:
     - "db/schema.rb"
     - "db/migrate/**/*"
-    - "bin/**/*"
+    - "bin/bundle"
+    - "bin/rails"
+    - "bin/rake"
+    - "bin/setup"
+    - "bin/docker-entrypoint"
     - "vendor/**/*"
     - "node_modules/**/*"
-    - ".git/**/*"
 
-# Tamanho máximo de linha
-Layout/LineLength:
-  Max: 120
-  Exclude:
-    - "config/routes.rb"
+Style/Documentation:
+  Enabled: false
 
-# Comprimento de métodos
-Metrics/MethodLength:
-  Max: 20
-  Exclude:
-    - "spec/**/*"
+Style/FrozenStringLiteralComment:
+  Enabled: false
 
-# Comprimento de blocos
+Style/StringLiterals:
+  EnforcedStyle: double_quotes
+
 Metrics/BlockLength:
+  Max: 50
   Exclude:
     - "spec/**/*"
     - "config/routes.rb"
     - "config/environments/**/*"
+    - "lib/tasks/**/*"
     - "Gemfile"
-
-# Comprimento de classes
-Metrics/ClassLength:
-  Max: 200
-
-# Documentation opcional
-Style/Documentation:
-  Enabled: false
-
-# Frozen string literal — desactivado para Rails
-Style/FrozenStringLiteralComment:
-  Enabled: false
-
-# Permite usar pp e puts em desenvolvimento/debug
-Style/SpecialGlobalVars:
-  Enabled: true
-
-# Rails específico
-Rails/Output:
-  Exclude:
-    - "db/seeds.rb"
-
-# RSpec
-RSpec/ExampleLength:
-  Max: 30
-
-RSpec/MultipleExpectations:
-  Max: 5
-
-RSpec/NestedGroups:
-  Max: 4

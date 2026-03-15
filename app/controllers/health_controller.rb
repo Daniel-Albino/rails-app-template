@@ -8,19 +8,9 @@ class HealthController < ApplicationController
   skip_before_action :verify_authenticity_token, raise: false
 
   def show
-    checks = {
-      database: database_healthy?,
-      redis: redis_healthy?,
-      timestamp: Time.current.iso8601,
-      environment: Rails.env,
-      version: Rails.version
-    }
-
-    if checks[:database] && checks[:redis]
-      render json: { status: "ok", checks: checks }, status: :ok
-    else
-      render json: { status: "error", checks: checks }, status: :service_unavailable
-    end
+    checks = { database: database_healthy?, redis: redis_healthy? }
+    render json: { status: checks.values.all? ? "ok" : "error", checks: checks },
+           status: checks.values.all? ? :ok : :service_unavailable
   end
 
   private

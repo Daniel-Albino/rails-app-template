@@ -10,9 +10,7 @@ threads min_threads_count, max_threads_count
 
 # Workers em produção (processos separados)
 worker_count = ENV.fetch("WEB_CONCURRENCY", 2).to_i
-if worker_count > 1 && !ENV["RAILS_ENV"].to_s.start_with?("development")
-  workers worker_count
-end
+workers worker_count if worker_count > 1 && !ENV["RAILS_ENV"].to_s.start_with?("development")
 
 # Porta
 port ENV.fetch("PORT", 3000)
