@@ -6,7 +6,11 @@ Rails.application.configure do
   config.action_controller.perform_caching = true
   config.public_file_server.enabled = ENV["RAILS_SERVE_STATIC_FILES"].present?
 
-  config.cache_store = :redis_cache_store, ENV.fetch("REDIS_URL", "redis://localhost:6379/0")
+  if ENV["SECRET_KEY_BASE"].present? && !ENV["ASSETS_PRECOMPILE"].present?
+    config.cache_store = :redis_cache_store, ENV.fetch("REDIS_URL", ...)
+  else
+    config.cache_store = :null_store
+  end
 
   config.active_storage.service = :local
   config.force_ssl = ENV.fetch("FORCE_SSL", "true") == "true"
