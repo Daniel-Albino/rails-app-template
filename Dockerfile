@@ -150,7 +150,6 @@ COPY --from=dependencies /usr/local/bundle /usr/local/bundle
 
 # Copia assets pré-compilados
 COPY --from=assets /app/public/assets ./public/assets
-COPY --from=assets /app/public/packs ./public/packs 2>/dev/null || true
 
 # Copia o código da aplicação
 COPY --chown=rails:rails . .
