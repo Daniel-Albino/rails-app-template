@@ -106,12 +106,11 @@ FROM dependencies AS assets
 
 ENV RAILS_ENV=production \
     NODE_ENV=production \
-    SECRET_KEY_BASE=dummy_for_assets_precompile \
     RAILS_LOG_TO_STDOUT=true
 
 COPY . .
 
-RUN bundle exec rails assets:precompile
+RUN SECRET_KEY_BASE=$(bundle exec rails secret) bundle exec rails assets:precompile
 
 # =============================================================================
 # STAGE 5: production

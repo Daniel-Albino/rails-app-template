@@ -27,7 +27,7 @@ Rails.application.configure do
     port: ENV.fetch("SMTP_PORT", 587).to_i,
     domain: ENV.fetch("SMTP_DOMAIN", "yourdomain.com"),
     user_name: ENV.fetch("SMTP_USERNAME", "apikey"),
-    password: ENV.fetch("SMTP_PASSWORD", nil),
+    password: ENV["SMTP_PASSWORD"],
     authentication: :plain,
     enable_starttls_auto: true
   }

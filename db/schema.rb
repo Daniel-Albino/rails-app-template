@@ -4,13 +4,14 @@
 #
 # This file is the source Rails uses to define your schema when running `bin/rails
 # db:schema:load`. When creating a new database, `bin/rails db:schema:load` tends to
-# be faster and is potentially less error prone than running all of your migrations
-# from scratch. Old migrations may fail to apply correctly if those migrations use
-# external dependencies or application code.
+# be faster and is potentially less error prone than running all of your
+# migrations from scratch. Old migrations may fail to apply correctly if those
+# migrations use external dependencies or application code.
 #
-# It's strongly recommended that you check this file into version control.
+# It's strongly recommended that you check this file into your version control system.
 
 ActiveRecord::Schema[8.0].define(version: 0) do
-  # Schema will be auto-generated after first migration
-  # Run: docker compose run web rails db:migrate
+  # These are extensions that must be enabled in order to support this database
+  enable_extension "pg_catalog.plpgsql"
+
 end
