@@ -110,7 +110,11 @@ ENV RAILS_ENV=production \
 
 COPY . .
 
-RUN SECRET_KEY_BASE=$(bundle exec rails secret) bundle exec rails assets:precompile
+RUN bundle exec rails secret > /tmp/secret && \
+    SECRET_KEY_BASE=$(cat /tmp/secret) \
+    ASSETS_PRECOMPILE=1 \
+    bundle exec rails assets:precompile && \
+    rm /tmp/secret
 
 # =============================================================================
 # STAGE 5: production
