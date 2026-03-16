@@ -1,5 +1,5 @@
 # =============================================================================
-# Gemfile — Rails 8.0 + stack testada e compatível
+# Gemfile - Rails 8.0 tested compatible stack
 # =============================================================================
 
 source "https://rubygems.org"
@@ -10,23 +10,23 @@ ruby "3.3.6"
 gem "puma", ">= 5.0"
 gem "rails", "~> 8.0.0"
 
-# Base de dados
+# Database
 gem "pg", "~> 1.1"
 
-# Cache & Background Jobs
+# Cache & background jobs
 gem "redis", "~> 5.0"
 gem "sidekiq", "~> 7.0"
 
-# Assets & Frontend (stack Rails 8 nativa)
+# Assets & frontend (native Rails 8 stack)
 gem "importmap-rails"
 gem "propshaft"
 gem "stimulus-rails"
 gem "turbo-rails"
 
-# Autenticação
+# Authentication
 gem "bcrypt", "~> 3.1.7"
 
-# Utilitários
+# Utilities
 gem "bootsnap", require: false
 gem "tzinfo-data", platforms: %i[windows jruby]
 
@@ -35,6 +35,7 @@ gem "image_processing", "~> 1.2"
 
 group :development, :test do
   gem "brakeman", require: false
+  gem "bundler-audit", require: false
   gem "debug", platforms: %i[mri windows]
   gem "dotenv-rails"
   gem "factory_bot_rails"

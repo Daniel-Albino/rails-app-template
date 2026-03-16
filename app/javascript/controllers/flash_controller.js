@@ -1,7 +1,7 @@
 // =============================================================================
 // app/javascript/controllers/flash_controller.js
-// Controller Stimulus para auto-fechar flash messages.
-// Uso: data-controller="flash" data-flash-timeout-value="5000"
+// Stimulus controller to auto-dismiss flash messages.
+// Usage: data-controller="flash" data-flash-timeout-value="5000"
 // =============================================================================
 
 import { Controller } from "@hotwired/stimulus"
@@ -12,7 +12,7 @@ export default class extends Controller {
   }
 
   connect() {
-    // Auto-dismiss após timeout
+    // Auto-dismiss after timeout
     if (this.timeoutValue > 0) {
       this.timer = setTimeout(() => this.dismiss(), this.timeoutValue)
     }

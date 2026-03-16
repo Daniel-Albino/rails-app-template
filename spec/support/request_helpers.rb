@@ -12,8 +12,8 @@ module RequestHelpers
     { "Content-Type" => "application/json", "Accept" => "application/json" }
   end
 
-  # Autentica um utilizador para testes de API
-  # Adapta ao teu sistema de autenticação (Devise, has_secure_token, etc.)
+  # Authenticate a user for API tests
+  # Adapt to your authentication system (Devise, has_secure_token, etc.)
   # def auth_headers(user)
   #   token = user.generate_token
   #   { "Authorization" => "Bearer #{token}" }.merge(json_headers)

@@ -1,15 +1,15 @@
 # =============================================================================
 # config/sidekiq.yml
-# Configuração do Sidekiq — queues e concorrência.
+# Sidekiq configuration - queues and concurrency.
 # =============================================================================
 
 :concurrency: <%= ENV.fetch("SIDEKIQ_CONCURRENCY", 5) %>
 
 :queues:
-  - [critical, 10]   # Prioridade máxima (emails urgentes, pagamentos)
-  - [default, 5]     # Jobs normais
-  - [mailers, 3]     # Envio de emails
-  - [low, 1]         # Jobs de baixa prioridade (relatórios, exports)
+  - [critical, 10]   # Highest priority (urgent emails, payments)
+  - [default, 5]     # Normal jobs
+  - [mailers, 3]     # Mail delivery
+  - [low, 1]         # Low priority (reports, exports)
 
 :max_retries: 3
 

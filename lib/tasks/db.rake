@@ -1,22 +1,22 @@
 # =============================================================================
 # lib/tasks/db.rake
-# Rake tasks personalizadas para gestão da base de dados.
+# Custom Rake tasks for database operations.
 # =============================================================================
 
 namespace :db do
-  desc "Apaga, recria, migra e carrega seeds — útil em desenvolvimento"
+  desc "Drop, recreate, migrate, and seed the database (useful in development)"
   task reset_and_seed: :environment do
-    puts "== A fazer reset completo da DB =="
+    puts "== Running full DB reset =="
     Rake::Task["db:drop"].invoke
     Rake::Task["db:create"].invoke
     Rake::Task["db:migrate"].invoke
     Rake::Task["db:seed"].invoke
-    puts "== Reset concluído! =="
+    puts "== Reset complete! =="
   end
 
-  desc "Mostra o estado de todas as migrations com timestamp"
+  desc "Show migration status with timestamps"
   task migration_status: :environment do
-    puts "\n== Estado das Migrations ==\n\n"
+    puts "\n== Migration Status ==\n\n"
     migrations = ActiveRecord::Base.connection.select_all(
       "SELECT version FROM schema_migrations ORDER BY version DESC"
     ).map { |r| r["version"] }
@@ -31,14 +31,14 @@ namespace :db do
     puts ""
   end
 
-  desc "Remove ficheiro setupcomplete (força novo db:prepare no próximo boot)"
+  desc "Remove setupcomplete file (forces db:prepare on next boot)"
   task force_setup: :environment do
     setup_file = Rails.root.join("setupcomplete")
     if File.exist?(setup_file)
       File.delete(setup_file)
-      puts "Ficheiro 'setupcomplete' removido. O próximo boot irá correr db:prepare."
+      puts "'setupcomplete' removed. Next boot will run db:prepare."
     else
-      puts "Ficheiro 'setupcomplete' não existe."
+      puts "'setupcomplete' does not exist."
     end
   end
 end

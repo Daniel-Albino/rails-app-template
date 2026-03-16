@@ -1,6 +1,6 @@
 # =============================================================================
 # spec/support/factory_bot.rb
-# Configuração do FactoryBot para RSpec.
+# FactoryBot configuration for RSpec.
 # =============================================================================
 
 RSpec.configure do |config|

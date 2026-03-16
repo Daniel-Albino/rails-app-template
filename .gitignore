@@ -1,8 +1,8 @@
 # =============================================================================
-# .gitignore — Ficheiros ignorados pelo Git
+# .gitignore - Files ignored by Git
 # =============================================================================
 
-# Variáveis de ambiente (NUNCA no git!)
+# Environment variables (NEVER commit)
 .env
 .env.local
 .env.*.local
@@ -11,17 +11,17 @@
 /log/*
 !/log/.keep
 
-# Temporários
+# Temporary files
 /tmp/*
 !/tmp/.keep
 
-# Gems instaladas localmente
+# Locally installed gems
 /vendor/bundle
 
 # Node modules
 /node_modules
 
-# Assets compilados
+# Compiled assets
 /public/assets
 /public/packs
 /public/packs-test

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # =============================================================================
 # docker/scripts/wait-for-db.sh
-# Aguarda que o PostgreSQL esteja pronto antes de continuar.
-# Útil em CI/CD ou scripts de migração autónomos.
+# Wait until PostgreSQL is ready before continuing.
+# Useful in CI/CD or migration scripts.
 #
-# Uso:
+# Usage:
 #   bash docker/scripts/wait-for-db.sh
 #   bash docker/scripts/wait-for-db.sh && bundle exec rails db:migrate
 # =============================================================================
@@ -22,17 +22,17 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-echo -e "${YELLOW}[wait-for-db]${NC} A aguardar PostgreSQL em ${HOST}:${PORT}..."
+echo -e "${YELLOW}[wait-for-db]${NC} Waiting for PostgreSQL at ${HOST}:${PORT}..."
 
 attempt=0
 until pg_isready -h "${HOST}" -p "${PORT}" -U "${USER}" -q; do
   attempt=$((attempt + 1))
   if [ "${attempt}" -ge "${MAX_ATTEMPTS}" ]; then
-    echo -e "${RED}[wait-for-db]${NC} PostgreSQL não disponível após ${MAX_ATTEMPTS} tentativas. A terminar."
+    echo -e "${RED}[wait-for-db]${NC} PostgreSQL unavailable after ${MAX_ATTEMPTS} attempts. Exiting."
     exit 1
   fi
-  echo -e "${YELLOW}[wait-for-db]${NC} Tentativa ${attempt}/${MAX_ATTEMPTS}. A aguardar ${WAIT_SECONDS}s..."
+  echo -e "${YELLOW}[wait-for-db]${NC} Attempt ${attempt}/${MAX_ATTEMPTS}. Waiting ${WAIT_SECONDS}s..."
   sleep "${WAIT_SECONDS}"
 done
 
-echo -e "${GREEN}[wait-for-db]${NC} PostgreSQL disponível!"
+echo -e "${GREEN}[wait-for-db]${NC} PostgreSQL is available!"

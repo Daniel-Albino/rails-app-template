@@ -1,6 +1,6 @@
 # =============================================================================
 # config/cable.yml
-# Configuração do Action Cable (WebSockets).
+# Action Cable (WebSockets) configuration.
 # =============================================================================
 
 development:

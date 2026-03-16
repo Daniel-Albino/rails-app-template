@@ -1,21 +1,21 @@
 # =============================================================================
-# docker-compose.yml — Orquestração dos serviços para DESENVOLVIMENTO
-# Para produção, utilizar docker-compose.prod.yml ou override.
+# docker-compose.yml - Service orchestration for DEVELOPMENT
+# For production, use docker-compose.prod.yml override.
 # =============================================================================
 
 name: my_app
 
 services:
   # ---------------------------------------------------------------------------
-  # Web — Rails Application
+  # Rails Application
   # ---------------------------------------------------------------------------
-  web:
+  rails:
     build:
       context: .
       dockerfile: Dockerfile
-      target: development          # Usa o stage de desenvolvimento
+      target: development          # Use development stage
     image: my_app:development
-    container_name: my_app_web
+    container_name: my_app_rails
     restart: unless-stopped
     depends_on:
       db:
@@ -25,11 +25,11 @@ services:
     ports:
       - "${APP_PORT:-3000}:3000"
     volumes:
-      # Hot reload: monta o código local dentro do container
+      # Hot reload: mount local source into container
       - .:/app
-      # Gems persistentes fora do volume do código (evita conflitos)
+      # Persist gems outside app volume (avoid conflicts)
       - bundle_cache:/usr/local/bundle
-      # Node modules persistentes
+      # Persist Node modules
       - node_modules_cache:/app/node_modules
     env_file:
       - .env
@@ -38,13 +38,53 @@ services:
       - RAILS_ENV=development
       - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-my_app_development}
       - REDIS_URL=redis://redis:6379/0
-    stdin_open: true   # Permite `rails console` interativo
-    tty: true          # Necessário para TTY (debugging, byebug, etc.)
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    stdin_open: true   # Enable interactive `rails console`
+    tty: true          # Required for TTY-based debugging
     networks:
       - my_app_network
 
   # ---------------------------------------------------------------------------
-  # DB — PostgreSQL
+  # Sidekiq worker
+  # ---------------------------------------------------------------------------
+  sidekiq:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    image: my_app:development
+    container_name: my_app_sidekiq
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rails:
+        condition: service_healthy
+    command: bundle exec sidekiq -C config/sidekiq.yml
+    volumes:
+      - .:/app
+      - bundle_cache:/usr/local/bundle
+      - node_modules_cache:/app/node_modules
+    env_file:
+      - .env
+      - docker/environments/development.env
+    environment:
+      - RAILS_ENV=development
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-my_app_development}
+      - REDIS_URL=redis://redis:6379/0
+      - SKIP_DB_PREPARE=true
+    networks:
+      - my_app_network
+
+  # ---------------------------------------------------------------------------
+  # DB - PostgreSQL
   # ---------------------------------------------------------------------------
   db:
     image: postgres:16-alpine
@@ -56,9 +96,9 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-my_app_development}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./docker/postgres/init:/docker-entrypoint-initdb.d   # Scripts de init opcionais
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d   # Optional init scripts
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"    # Exposto para ferramentas locais (TablePlus, DBeaver, etc.)
+      - "${POSTGRES_PORT:-5432}:5432"    # Exposed for local tools (TablePlus, DBeaver, etc.)
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-my_app_development}"]
       interval: 5s
@@ -69,7 +109,7 @@ services:
       - my_app_network
 
   # ---------------------------------------------------------------------------
-  # Redis — Cache e Action Cable
+  # Redis - Cache and Action Cable
   # ---------------------------------------------------------------------------
   redis:
     image: redis:7-alpine
@@ -79,7 +119,7 @@ services:
     volumes:
       - redis_data:/data
     ports:
-      - "${REDIS_PORT:-6379}:6379"       # Exposto para inspecção local (RedisInsight, etc.)
+      - "${REDIS_PORT:-6379}:6379"       # Exposed for local inspection (RedisInsight, etc.)
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -90,8 +130,8 @@ services:
       - my_app_network
 
   # ---------------------------------------------------------------------------
-  # Mailpit — Email testing em desenvolvimento (não vai para produção)
-  # Aceder via http://localhost:8025
+  # Mailpit - Email testing in development (not for production)
+  # Access via http://localhost:8025
   # ---------------------------------------------------------------------------
   mailpit:
     image: axllent/mailpit:latest
@@ -107,7 +147,7 @@ services:
       - my_app_network
 
 # =============================================================================
-# Volumes persistentes
+# Persistent volumes
 # =============================================================================
 volumes:
   postgres_data:
@@ -120,7 +160,7 @@ volumes:
     driver: local
 
 # =============================================================================
-# Rede interna
+# Internal network
 # =============================================================================
 networks:
   my_app_network:

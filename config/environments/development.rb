@@ -17,7 +17,7 @@ Rails.application.configure do
   # Active Storage
   config.active_storage.service = :local
 
-  # Mailer — Mailpit
+  # Mailer - Mailpit
   config.action_mailer.raise_delivery_errors = false
   config.action_mailer.delivery_method = :smtp
   config.action_mailer.smtp_settings = {

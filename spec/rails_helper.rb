@@ -1,6 +1,6 @@
 # =============================================================================
 # spec/rails_helper.rb
-# Configuração RSpec para Rails.
+# RSpec configuration for Rails.
 # =============================================================================
 
 require "spec_helper"
@@ -17,7 +17,7 @@ require "database_cleaner/active_record"
 # Carrega support files
 Dir[Rails.root.join("spec/support/**/*.rb")].each { |f| require f }
 
-# Verifica migrações pendentes
+# Check pending migrations
 begin
   ActiveRecord::Migration.maintain_test_schema!
 rescue ActiveRecord::PendingMigrationError => e

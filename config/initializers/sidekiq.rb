@@ -1,7 +1,7 @@
 # =============================================================================
 # config/initializers/sidekiq.rb
-# Configuração do Sidekiq 7+ para background jobs.
-# Na versão 7, a configuração Redis é feita via REDIS_URL directamente.
+# Sidekiq 7+ configuration for background jobs.
+# In v7, Redis config is set directly with REDIS_URL.
 # =============================================================================
 
 Sidekiq.configure_server do |config|

@@ -1,13 +1,13 @@
 // =============================================================================
 // app/javascript/application.js
-// Entrada principal do JavaScript da aplicação.
+// Main application JavaScript entrypoint.
 // =============================================================================
 
-// Hotwire — Turbo (navegação SPA-like sem reload)
+// Hotwire - Turbo (SPA-like navigation without full reload)
 import "@hotwired/turbo-rails"
 
-// Hotwire — Stimulus (interatividade ligeira)
+// Hotwire - Stimulus (light interactivity)
 import "controllers"
 
-// Importa outros módulos aqui:
+// Import other modules here:
 // import "channels"
