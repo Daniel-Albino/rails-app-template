@@ -20,5 +20,9 @@ module MyApp
       passw secret token _key crypt salt certificate
       otp ssn cvv cvc credit_card
     ]
+
+    config.console do
+      Rails.application.config.irb_prompt = :CUSTOM
+    end
   end
 end

@@ -13,6 +13,7 @@ ARG APP_HOME=/app
 ENV LANG=C.UTF-8 \
     LC_ALL=C.UTF-8 \
     BUNDLE_PATH=/usr/local/bundle \
+    BUNDLE_BIN=/usr/local/bundle/bin \
     BUNDLE_JOBS=4 \
     BUNDLE_RETRY=3 \
     GEM_HOME=/usr/local/bundle \
@@ -26,9 +27,17 @@ RUN apt-get update -qq && \
     apt-get install -y --no-install-recommends \
       curl \
       gnupg2 \
+      zsh \
+      git \
       ca-certificates \
       libpq5 && \
     rm -rf /var/lib/apt/lists/*
+
+# Install Oh My Zsh
+RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+RUN echo 'export PATH="/usr/local/bundle/bin:$PATH"' >> /root/.zshrc
+
+RUN ln -s /app/.irbrc /root/.irbrc
 
 # =============================================================================
 # STAGE 2: dependencies

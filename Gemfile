@@ -33,6 +33,8 @@ gem "tzinfo-data", platforms: %i[windows jruby]
 # Image processing (ActiveStorage)
 gem "image_processing", "~> 1.2"
 
+gem "amazing_print", "~> 1.4.0"
+
 group :development, :test do
   gem "brakeman", require: false
   gem "bundler-audit", require: false
