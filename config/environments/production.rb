@@ -12,7 +12,8 @@ Rails.application.configure do
                          :null_store
                        end
 
-  config.active_storage.service = :local
+  # Production should use external object storage (for example: amazon, google, azure).
+  config.active_storage.service = ENV.fetch("ACTIVE_STORAGE_SERVICE", "amazon").to_sym
   config.force_ssl = ENV.fetch("FORCE_SSL", "true") == "true"
 
   config.log_level = ENV.fetch("RAILS_LOG_LEVEL", "info").to_sym

@@ -1,20 +1,9 @@
 # =============================================================================
 # config/initializers/inflections.rb
-# Regras de inflexão personalizadas para palavras em Português.
+# Custom inflection rules.
 # =============================================================================
 
-ActiveSupport::Inflector.inflections(:pt) do |inflect|
-  # Palavras irregulares (singular => plural)
-  inflect.irregular "utilizador",  "utilizadores"
-  inflect.irregular "artigo",      "artigos"
-  inflect.irregular "categoria",   "categorias"
-  inflect.irregular "permissao",   "permissoes"
-
-  # Palavras invariáveis
-  inflect.uncountable %w[informacao feedback]
-end
-
 ActiveSupport::Inflector.inflections(:en) do |inflect|
-  # Adiciona aqui as tuas palavras irregulares em inglês
+  # Add custom English irregular words here
   # inflect.irregular "person", "people"
 end

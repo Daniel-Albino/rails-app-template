@@ -1,6 +1,6 @@
 # =============================================================================
 # spec/support/capybara.rb
-# Configuração do Capybara para testes de integração (feature specs).
+# Capybara configuration for integration tests (feature specs).
 # =============================================================================
 
 require "capybara/rspec"
@@ -10,7 +10,7 @@ Capybara.configure do |config|
   config.server = :puma, { Silent: true }
 end
 
-# Driver padrão — headless Chrome
+# Default driver - headless Chrome
 RSpec.configure do |config|
   config.before(:each, type: :system) do
     driven_by :selenium, using: :headless_chrome, screen_size: [1400, 1400]

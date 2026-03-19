@@ -3,21 +3,27 @@
 # =============================================================================
 
 Rails.application.routes.draw do
-  # Health check — usado pelo Docker e load balancers
+  # Health check used by Docker and load balancers
   get "/health", to: "health#show"
 
-  # Sidekiq Web UI (apenas autenticado em produção)
+  # Sidekiq Web UI
   require "sidekiq/web"
   if Rails.env.production?
-    # Em produção: protege com autenticação básica ou Devise
-    # Sidekiq::Web.use Rack::Auth::Basic do |username, password|
-    #   ActiveSupport::SecurityUtils.secure_compare(
-    #     ::Digest::SHA256.hexdigest(username), ::Digest::SHA256.hexdigest(ENV["SIDEKIQ_USERNAME"])
-    #   ) &
-    #   ActiveSupport::SecurityUtils.secure_compare(
-    #     ::Digest::SHA256.hexdigest(password), ::Digest::SHA256.hexdigest(ENV["SIDEKIQ_PASSWORD"])
-    #   )
-    # end
+    sidekiq_username = ENV.fetch("SIDEKIQ_USERNAME")
+    sidekiq_password = ENV.fetch("SIDEKIQ_PASSWORD")
+
+    Sidekiq::Web.use Rack::Auth::Basic do |username, password|
+      username_ok = ActiveSupport::SecurityUtils.secure_compare(
+        ::Digest::SHA256.hexdigest(username),
+        ::Digest::SHA256.hexdigest(sidekiq_username)
+      )
+      password_ok = ActiveSupport::SecurityUtils.secure_compare(
+        ::Digest::SHA256.hexdigest(password),
+        ::Digest::SHA256.hexdigest(sidekiq_password)
+      )
+
+      username_ok && password_ok
+    end
   end
   mount Sidekiq::Web => "/sidekiq"
 
@@ -28,7 +34,7 @@ Rails.application.routes.draw do
   # Root
   # root "home#index"
 
-  # Define as tuas rotas aqui:
+  # Define your routes here:
   # resources :articles
   # namespace :api do
   #   namespace :v1 do

@@ -1,6 +1,6 @@
 # =============================================================================
 # spec/spec_helper.rb
-# Configuração base do RSpec.
+# Base RSpec configuration.
 # =============================================================================
 
 RSpec.configure do |config|

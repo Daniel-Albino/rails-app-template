@@ -10,8 +10,8 @@ module MyApp
     config.time_zone = "Lisbon"
     config.active_record.default_timezone = :utc
 
-    config.i18n.default_locale = :pt
-    config.i18n.available_locales = %i[pt en]
+    config.i18n.default_locale = :en
+    config.i18n.available_locales = %i[en]
     config.i18n.load_path += Dir[Rails.root.join("config/locales/**/*.{rb,yml}")]
 
     config.active_job.queue_adapter = :sidekiq
@@ -20,5 +20,9 @@ module MyApp
       passw secret token _key crypt salt certificate
       otp ssn cvv cvc credit_card
     ]
+
+    config.console do
+      Rails.application.config.irb_prompt = :CUSTOM
+    end
   end
 end

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # =============================================================================
 # docker/scripts/ci-test.sh
-# Script para correr a suite de testes em CI/CD (GitHub Actions, GitLab CI, etc.)
+# Run CI test suite (GitHub Actions, GitLab CI, etc.)
 #
-# Uso (via docker compose):
-#   docker compose run --rm -e RAILS_ENV=test web bash docker/scripts/ci-test.sh
+# Usage (via docker compose):
+#   docker compose run --rm -e RAILS_ENV=test rails bash docker/scripts/ci-test.sh
 # =============================================================================
 
 set -e
@@ -20,33 +20,33 @@ err() { echo -e "${RED}[CI]${NC} $1"; exit 1; }
 
 export RAILS_ENV=test
 
-log "== Iniciando suite de testes CI =="
+log "== Starting CI test suite =="
 
-# Aguarda DB
-log "A aguardar base de dados..."
+# Wait for DB
+log "Waiting for database..."
 bash docker/scripts/wait-for-db.sh
 
-# Instala gems
-log "A verificar gems..."
+# Install gems
+log "Checking gems..."
 bundle check || bundle install --jobs=4 --retry=3
 
-# Prepara base de dados de teste
-log "A preparar base de dados de teste..."
+# Prepare test database
+log "Preparing test database..."
 bundle exec rails db:prepare
 
-# Linting com RuboCop
-log "A correr RuboCop..."
-bundle exec rubocop --no-color --format progress || err "RuboCop falhou."
-ok "RuboCop passou."
+# Linting with RuboCop
+log "Running RuboCop..."
+bundle exec rubocop --no-color --format progress || err "RuboCop failed."
+ok "RuboCop passed."
 
-# Análise de segurança com Brakeman
-log "A correr Brakeman..."
-bundle exec brakeman --no-progress --quiet || err "Brakeman encontrou vulnerabilidades."
-ok "Brakeman passou."
+# Security analysis with Brakeman
+log "Running Brakeman..."
+bundle exec brakeman --no-progress --quiet || err "Brakeman found vulnerabilities."
+ok "Brakeman passed."
 
-# Suite de testes RSpec
-log "A correr RSpec..."
+# RSpec test suite
+log "Running RSpec..."
 bundle exec rspec --format progress --format json --out tmp/rspec_results.json
-ok "RSpec passou."
+ok "RSpec passed."
 
-log "== Todos os checks passaram com sucesso! =="
+log "== All checks passed successfully! =="

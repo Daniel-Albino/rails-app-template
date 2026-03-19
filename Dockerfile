@@ -1,18 +1,19 @@
 # =============================================================================
 # STAGE 1: base
-# Imagem base partilhada por development e production.
-# Instala dependências do sistema e configura o ambiente Ruby.
+# Base image shared by development and production.
+# Installs system dependencies and configures Ruby environment.
 # =============================================================================
 FROM ruby:3.3.6-slim AS base
 
-# Argumentos de build
+# Build arguments
 ARG APP_USER=rails
 ARG APP_HOME=/app
 
-# Variáveis de ambiente base
+# Base environment variables
 ENV LANG=C.UTF-8 \
     LC_ALL=C.UTF-8 \
     BUNDLE_PATH=/usr/local/bundle \
+    BUNDLE_BIN=/usr/local/bundle/bin \
     BUNDLE_JOBS=4 \
     BUNDLE_RETRY=3 \
     GEM_HOME=/usr/local/bundle \
@@ -21,23 +22,31 @@ ENV LANG=C.UTF-8 \
 
 WORKDIR ${APP_HOME}
 
-# Instala dependências de sistema mínimas para o base
+# Install minimal base system dependencies
 RUN apt-get update -qq && \
     apt-get install -y --no-install-recommends \
       curl \
       gnupg2 \
+      zsh \
+      git \
       ca-certificates \
       libpq5 && \
     rm -rf /var/lib/apt/lists/*
 
+# Install Oh My Zsh
+RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+RUN echo 'export PATH="/usr/local/bundle/bin:$PATH"' >> /root/.zshrc
+
+RUN ln -s /app/.irbrc /root/.irbrc
+
 # =============================================================================
 # STAGE 2: dependencies
-# Instala todas as dependências de build (gems + node_modules).
-# Separado para maximizar cache do Docker.
+# Install all build dependencies (gems + node_modules).
+# Kept separate to maximize Docker cache reuse.
 # =============================================================================
 FROM base AS dependencies
 
-# Instala dependências de build
+# Install build dependencies
 RUN apt-get update -qq && \
     apt-get install -y --no-install-recommends \
       build-essential \
@@ -49,27 +58,27 @@ RUN apt-get update -qq && \
       pkg-config && \
     rm -rf /var/lib/apt/lists/*
 
-# Instala Node.js 20 LTS + Yarn
+# Install Node.js 20 LTS + Yarn
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y --no-install-recommends nodejs && \
     npm install -g yarn && \
     rm -rf /var/lib/apt/lists/*
 
-# Copia apenas os ficheiros de dependências para aproveitar cache
+# Copy dependency files first for better caching
 COPY Gemfile Gemfile.lock* ./
 
-# Instala gems (cached se Gemfile não mudar)
+# Install gems (cached if Gemfile does not change)
 RUN bundle install && \
     rm -rf "${BUNDLE_PATH}/ruby/*/cache" \
            "${BUNDLE_PATH}/ruby/*/bundler/gems/*/.git"
 
-# Copia package.json e instala dependências Node
+# Copy package.json and install Node dependencies
 COPY package.json yarn.lock* ./
 RUN yarn install --no-frozen-lockfile
 
 # =============================================================================
 # STAGE 3: development
-# Imagem para ambiente de desenvolvimento com hot reload e ferramentas de debug.
+# Development image with hot reload and debugging tools.
 # =============================================================================
 FROM dependencies AS development
 
@@ -77,7 +86,7 @@ ENV RAILS_ENV=development \
     NODE_ENV=development \
     RAILS_LOG_TO_STDOUT=true
 
-# Instala ferramentas extras de dev (úteis mas não necessárias em prod)
+# Install extra dev tools (useful but not required in production)
 RUN apt-get update -qq && \
     apt-get install -y --no-install-recommends \
       vim \
@@ -85,13 +94,13 @@ RUN apt-get update -qq && \
       postgresql-client && \
     rm -rf /var/lib/apt/lists/*
 
-# Copia entrypoint e scripts
+# Copy entrypoint and scripts
 COPY docker/entrypoints/entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY docker/scripts/install-system-dependencies.sh /usr/local/bin/install-system-dependencies.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh \
              /usr/local/bin/install-system-dependencies.sh
 
-# Copia o código da aplicação
+# Copy application source code
 COPY . .
 
 EXPOSE 3000
@@ -100,7 +109,7 @@ ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0", "-p", "3000"]
 
 # =============================================================================
-# STAGE 4: assets (produção — pré-compilação de assets)
+# STAGE 4: assets (production - precompile assets)
 # =============================================================================
 FROM dependencies AS assets
 
@@ -118,7 +127,7 @@ RUN bundle exec rails secret > /tmp/secret && \
 
 # =============================================================================
 # STAGE 5: production
-# Imagem final de produção — mínima, segura e otimizada.
+# Final production image - minimal, secure, optimized.
 # =============================================================================
 FROM base AS production
 
@@ -127,38 +136,38 @@ ENV RAILS_ENV=production \
     RAILS_LOG_TO_STDOUT=true \
     RAILS_SERVE_STATIC_FILES=true
 
-# Instala apenas dependências de runtime
+# Install runtime-only dependencies
 RUN apt-get update -qq && \
     apt-get install -y --no-install-recommends \
       libpq5 \
       postgresql-client && \
     rm -rf /var/lib/apt/lists/*
 
-# Instala Node.js runtime (necessário para alguns assets em prod)
+# Install Node.js runtime (required by some production assets)
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y --no-install-recommends nodejs && \
     rm -rf /var/lib/apt/lists/*
 
-# Cria utilizador não-root para segurança
+# Create non-root user for security
 RUN groupadd --system rails && \
     useradd --system --gid rails --home /app --shell /bin/bash rails
 
 WORKDIR /app
 
-# Copia gems instaladas do stage de dependencies
+# Copy installed gems from dependencies stage
 COPY --from=dependencies /usr/local/bundle /usr/local/bundle
 
-# Copia assets pré-compilados
+# Copy precompiled assets
 COPY --from=assets /app/public/assets ./public/assets
 
-# Copia o código da aplicação
+# Copy application source code
 COPY --chown=rails:rails . .
 
-# Copia e configura entrypoint
+# Copy and configure entrypoint
 COPY docker/entrypoints/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# Muda para utilizador não-root
+# Switch to non-root user
 USER rails
 
 EXPOSE 3000

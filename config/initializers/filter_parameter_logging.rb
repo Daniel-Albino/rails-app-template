@@ -1,6 +1,6 @@
 # =============================================================================
 # config/initializers/filter_parameter_logging.rb
-# Oculta parâmetros sensíveis dos logs Rails.
+# Filter sensitive parameters from Rails logs.
 # =============================================================================
 
 Rails.application.config.filter_parameters += %i[

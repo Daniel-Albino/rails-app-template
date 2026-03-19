@@ -3,12 +3,12 @@
 # =============================================================================
 
 class ApplicationJob < ActiveJob::Base
-  # Automaticamente retenta em erros de deadlock
+  # Automatically retry on deadlock errors
   retry_on ActiveRecord::Deadlocked
 
-  # Descarta jobs com records que não existem mais
+  # Discard jobs with records that no longer exist
   discard_on ActiveJob::DeserializationError
 
-  # Timeout por defeito
+  # Default timeout
   # queue_as :default
 end

@@ -1,7 +1,7 @@
 # =============================================================================
 # .github/workflows/ci.yml
-# Pipeline CI para GitHub Actions.
-# Corre em cada push e pull request para a branch main/develop.
+# CI pipeline for GitHub Actions.
+# Runs on each push and pull request to main/develop.
 # =============================================================================
 
 name: CI
@@ -21,7 +21,7 @@ env:
 
 jobs:
   # ---------------------------------------------------------------------------
-  # Linting e análise estática
+  # Linting and static analysis
   # ---------------------------------------------------------------------------
   lint:
     name: Lint & Security
@@ -42,8 +42,11 @@ jobs:
       - name: Brakeman
         run: bundle exec brakeman --no-progress --quiet
 
+      - name: Bundle Audit
+        run: bundle exec bundler-audit check --update
+
   # ---------------------------------------------------------------------------
-  # Testes
+  # Tests
   # ---------------------------------------------------------------------------
   test:
     name: RSpec Tests
@@ -90,7 +93,7 @@ jobs:
           cache: yarn
 
       - name: Install Yarn dependencies
-        run: yarn install --no-frozen-lockfile
+        run: yarn install --frozen-lockfile
 
       - name: Prepare database
         run: bundle exec rails db:prepare
@@ -110,7 +113,7 @@ jobs:
           path: tmp/rspec_results.json
 
   # ---------------------------------------------------------------------------
-  # Build da imagem Docker de produção
+  # Build production Docker image
   # ---------------------------------------------------------------------------
   docker-build:
     name: Docker Build (Production)
