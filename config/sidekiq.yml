@@ -14,7 +14,7 @@
 :max_retries: 3
 
 :dead_max_jobs: 1_000
-:dead_timeout_in_seconds: <%= 6.months.to_i %>
+:dead_timeout_in_seconds: <%= 6 * 30 * 24 * 60 * 60 %>  # 6 months in seconds
 
 # Logging
-:verbose: <%= Rails.env.development? %>
+:verbose: <%= ENV.fetch("SIDEKIQ_VERBOSE", "false") == "true" %>
