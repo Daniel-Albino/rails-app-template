@@ -9,8 +9,8 @@ Rails.application.routes.draw do
   # Sidekiq Web UI
   require "sidekiq/web"
   if Rails.env.production? && ENV["SIDEKIQ_USERNAME"].present? && ENV["SIDEKIQ_PASSWORD"].present?
-    sidekiq_username = ENV["SIDEKIQ_USERNAME"]
-    sidekiq_password = ENV["SIDEKIQ_PASSWORD"]
+    sidekiq_username = ENV.fetch("SIDEKIQ_USERNAME", nil)
+    sidekiq_password = ENV.fetch("SIDEKIQ_PASSWORD", nil)
 
     Sidekiq::Web.use Rack::Auth::Basic do |username, password|
       username_ok = ActiveSupport::SecurityUtils.secure_compare(
