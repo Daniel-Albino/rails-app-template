@@ -1,7 +1,7 @@
 # =============================================================================
 # app/controllers/health_controller.rb
-# Endpoint de health check para Docker e load balancers.
-# GET /health → 200 OK se tudo estiver bem.
+# Health check endpoint for Docker and load balancers.
+# GET /health -> 200 OK when all checks pass.
 # =============================================================================
 
 class HealthController < ApplicationController

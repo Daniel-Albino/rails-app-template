@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # =============================================================================
 # docker/entrypoints/entrypoint.sh
-# Entrypoint principal do container Rails.
-# Executado sempre que o container inicia.
+# Main Rails container entrypoint.
+# Runs every time the container starts.
 # =============================================================================
 
-set -e  # Termina imediatamente se algum comando falhar
+set -e  # Exit immediately on command failure
 
-# Cores para output legível
+# Colored output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -23,83 +23,83 @@ APP_HOME=${APP_HOME:-/app}
 SETUP_FILE="${APP_HOME}/setupcomplete"
 
 # =============================================================================
-# PASSO 1 — Instalar dependências de sistema (se necessário)
+# STEP 1 - Install system dependencies (if needed)
 # =============================================================================
 if [ -f /usr/local/bin/install-system-dependencies.sh ]; then
-  log_info "A verificar dependências de sistema..."
+  log_info "Checking system dependencies..."
   /usr/local/bin/install-system-dependencies.sh
 fi
 
 # =============================================================================
-# PASSO 2 — Bundle Install
-# Garante que todas as gems estão instaladas/actualizadas.
+# STEP 2 - Bundle install
+# Ensure all gems are installed/updated.
 # =============================================================================
-log_info "A verificar gems (bundle install)..."
+log_info "Checking gems (bundle install)..."
 cd "${APP_HOME}"
 
 bundle check || bundle install --jobs="${BUNDLE_JOBS:-4}" --retry="${BUNDLE_RETRY:-3}"
-log_success "Gems prontas."
+log_success "Gems ready."
 
 # =============================================================================
-# PASSO 3 — Yarn Install (se package.json existir)
+# STEP 3 - Yarn install (if package.json exists)
 # =============================================================================
 if [ -f "${APP_HOME}/package.json" ]; then
-  log_info "A verificar dependências Node (yarn install)..."
+  log_info "Checking Node dependencies (yarn install)..."
   yarn install --check-files 2>/dev/null || yarn install
-  log_success "Node modules prontos."
+  log_success "Node modules ready."
 fi
 
 # =============================================================================
-# PASSO 4 — Remover server.pid antigo (evita crash ao reiniciar)
+# STEP 4 - Remove stale server.pid (prevents restart crash)
 # =============================================================================
 PID_FILE="${APP_HOME}/tmp/pids/server.pid"
 if [ -f "${PID_FILE}" ]; then
-  log_warning "Ficheiro server.pid encontrado. A remover..."
+  log_warning "server.pid file found. Removing..."
   rm -f "${PID_FILE}"
-  log_success "server.pid removido."
+  log_success "server.pid removed."
 fi
 
 # =============================================================================
-# PASSO 5 — Setup inicial da base de dados
-# Executa rails db:prepare apenas na PRIMEIRA vez (quando setupcomplete não existe).
-# Nas execuções seguintes, corre apenas as migrations pendentes.
+# STEP 5 - Initial database setup
+# Run rails db:prepare only on first boot (when setupcomplete does not exist).
+# On later boots, only run pending migrations.
 # =============================================================================
 
-# Aguarda PostgreSQL estar disponível usando pg_isready (rápido, sem carregar Rails)
+# Wait for PostgreSQL using pg_isready (fast, no Rails boot needed)
 wait_for_db() {
   local host="${POSTGRES_HOST:-db}"
   local port="${POSTGRES_PORT:-5432}"
   local user="${POSTGRES_USER:-postgres}"
 
-  log_info "A aguardar PostgreSQL em ${host}:${port}..."
+  log_info "Waiting for PostgreSQL at ${host}:${port}..."
   until pg_isready -h "${host}" -p "${port}" -U "${user}" -q; do
     sleep 1
   done
-  log_success "Base de dados disponível."
+  log_success "Database available."
 }
 
-if [ "${RAILS_ENV}" != "test" ]; then
+if [ "${RAILS_ENV}" != "test" ] && [ "${SKIP_DB_PREPARE:-false}" != "true" ]; then
   wait_for_db
 
   if [ ! -f "${SETUP_FILE}" ]; then
-    log_info "Primeira execução detectada. A preparar base de dados..."
+    log_info "First run detected. Preparing database..."
 
-    # db:prepare cria a DB se não existir, ou corre migrations se já existir schema
+    # db:prepare creates DB if missing, or runs migrations if schema exists
     bundle exec rails db:prepare --trace
 
     touch "${SETUP_FILE}"
-    log_success "Base de dados preparada. Ficheiro 'setupcomplete' criado."
+    log_success "Database prepared. 'setupcomplete' created."
   else
-    log_info "Setup anterior detectado. A correr apenas migrations pendentes..."
-    bundle exec rails db:migrate 2>/dev/null || log_warning "Migrations sem alterações ou com erro não crítico."
-    log_success "Migrations verificadas."
+    log_info "Previous setup detected. Running pending migrations only..."
+    bundle exec rails db:migrate 2>/dev/null || log_warning "No migration changes or non-critical migration issue."
+    log_success "Migrations checked."
   fi
 fi
 
 # =============================================================================
-# PASSO 6 — Executar o comando passado ao container
-# Exemplo: "bundle exec rails server -b 0.0.0.0 -p 3000"
+# STEP 6 - Run the container command
+# Example: "bundle exec rails server -b 0.0.0.0 -p 3000"
 # =============================================================================
-log_success "Container pronto. A iniciar: $*"
+log_success "Container ready. Starting: $*"
 echo ""
 exec "$@"

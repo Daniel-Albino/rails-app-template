@@ -1,6 +1,6 @@
 # =============================================================================
 # spec/support/database_cleaner.rb
-# Garante que a base de dados fica limpa entre testes.
+# Ensure the database is clean between tests.
 # =============================================================================
 
 RSpec.configure do |config|
@@ -13,7 +13,7 @@ RSpec.configure do |config|
     DatabaseCleaner.cleaning { example.run }
   end
 
-  # Specs com JS usam truncation (Capybara com driver JS não suporta transactions)
+  # JS specs use truncation (Capybara JS drivers do not support transactions)
   config.before(:each, :js) do
     DatabaseCleaner.strategy = :truncation
   end

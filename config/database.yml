@@ -1,13 +1,13 @@
 # =============================================================================
 # config/database.yml
-# Configuração da base de dados para todos os ambientes.
-# Usa variáveis de ambiente para todas as credenciais.
+# Database configuration for all environments.
+# Uses environment variables for all credentials.
 # =============================================================================
 
 default: &default
   adapter: postgresql
   encoding: unicode
-  # Usa DATABASE_URL se definido, caso contrário usa variáveis individuais
+  # Use DATABASE_URL if defined, otherwise use individual variables
   url: <%= ENV['DATABASE_URL'] %>
   host: <%= ENV.fetch('POSTGRES_HOST', 'db') %>
   username: <%= ENV.fetch('POSTGRES_USER', 'postgres') %>
@@ -30,5 +30,5 @@ production:
   <<: *default
   database: <%= ENV.fetch('POSTGRES_DB', 'my_app_production') %>
   pool: <%= ENV.fetch('RAILS_MAX_THREADS', 5) %>
-  # Em produção: usa sempre DATABASE_URL
-  # Exemplo: DATABASE_URL=postgresql://user:pass@host:5432/my_app_production
+  # In production, always prefer DATABASE_URL
+  # Example: DATABASE_URL=postgresql://user:pass@host:5432/my_app_production

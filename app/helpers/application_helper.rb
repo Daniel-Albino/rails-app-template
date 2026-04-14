@@ -1,11 +1,11 @@
 # =============================================================================
 # app/helpers/application_helper.rb
-# Helpers globais disponíveis em todas as views.
+# Global helpers available in all views.
 # =============================================================================
 
 module ApplicationHelper
-  # Título dinâmico da página
-  # Uso na view: content_for :title, "Página de Artigos"
+  # Dynamic page title
+  # Usage in view: content_for :title, "Articles Page"
   # No layout: <%= page_title %>
   def page_title(separator: " | ")
     base = "MyApp"
@@ -14,7 +14,7 @@ module ApplicationHelper
     "#{content_for(:title)}#{separator}#{base}"
   end
 
-  # Classes CSS condicionais para flash messages
+  # Conditional CSS classes for flash messages
   def flash_class(type)
     {
       "notice" => "flash flash--notice",
@@ -25,7 +25,7 @@ module ApplicationHelper
     }.fetch(type.to_s, "flash flash--notice")
   end
 
-  # Formata datas de forma consistente em PT
+  # Consistent date formatting
   def format_date(date, format: :long)
     return "" if date.blank?
 
@@ -38,7 +38,7 @@ module ApplicationHelper
     l(datetime, format: format)
   end
 
-  # Renderiza ícone SVG inline (se usares uma biblioteca)
+  # Render inline SVG icon (if using an icon library)
   # def icon(name, **options)
   #   content_tag :span, class: "icon icon--#{name}", **options do
   #     render "shared/icons/#{name}"

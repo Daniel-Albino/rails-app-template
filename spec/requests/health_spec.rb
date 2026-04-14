@@ -7,7 +7,7 @@ require "rails_helper"
 
 RSpec.describe "Health Check", type: :request do
   describe "GET /health" do
-    context "quando os serviços estão disponíveis" do
+    context "when services are available" do
       before do
         allow(ActiveRecord::Base.connection).to receive(:execute).and_return(true)
         redis_double = instance_double(Redis, ping: "PONG")

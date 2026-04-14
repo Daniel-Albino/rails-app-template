@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # =============================================================================
 # bin/docker-entrypoint
-# Wrapper leve que delega no entrypoint principal do Docker.
-# Alguns deploy providers (Render, Fly.io, Heroku) chamam este ficheiro.
+# Lightweight wrapper that delegates to the main Docker entrypoint.
+# Some deploy providers (Render, Fly.io, Heroku) call this file.
 # =============================================================================
 
 set -e

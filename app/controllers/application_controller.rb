@@ -3,10 +3,10 @@
 # =============================================================================
 
 class ApplicationController < ActionController::Base
-  # Protecção CSRF
+  # CSRF protection
   protect_from_forgery with: :exception
 
-  # Filtros globais de segurança
+  # Global security filters
   before_action :set_locale
 
   private
@@ -15,7 +15,7 @@ class ApplicationController < ActionController::Base
     I18n.locale = params[:locale] || I18n.default_locale
   end
 
-  # Helper para APIs — responde com JSON em caso de erro
+  # API helper - render JSON error response
   def respond_with_error(message, status = :unprocessable_entity)
     render json: { error: message }, status: status
   end

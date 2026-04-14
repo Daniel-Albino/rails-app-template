@@ -1,12 +1,12 @@
 /*
  * app/assets/stylesheets/application.css
- * Folha de estilos principal da aplicação.
+ * Main application stylesheet.
  *
- * Se usares TailwindCSS, renomeia para application.tailwind.css
- * e corre: yarn build:css
+ * If using TailwindCSS, rename to application.tailwind.css
+ * and run: yarn build:css
  */
 
-/* Reset básico */
+/* Basic reset */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -54,7 +54,7 @@ body {
   border: 1px solid #fef08a;
 }
 
-/* Container utilitário */
+/* Utility container */
 .container {
   max-width: 1200px;
   margin: 0 auto;

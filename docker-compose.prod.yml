@@ -1,18 +1,18 @@
 # =============================================================================
-# docker-compose.prod.yml — Override para PRODUÇÃO
-# Uso: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# docker-compose.prod.yml - PRODUCTION override
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 # =============================================================================
 
 name: my_app
 
 services:
-  web:
+  rails:
     build:
       context: .
       dockerfile: Dockerfile
       target: production
     image: my_app:production
-    container_name: my_app_web_prod
+    container_name: my_app_rails_prod
     restart: always
     depends_on:
       db:
@@ -21,14 +21,14 @@ services:
         condition: service_healthy
     ports:
       - "${APP_PORT:-3000}:3000"
-    volumes: []    # Sem hot reload em produção
+    volumes: []    # No hot reload in production
     env_file:
       - .env
       - docker/environments/production.env
     environment:
       - RAILS_ENV=production
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-my_app_production}
-      - REDIS_URL=redis://redis:6379/0
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
     deploy:
       replicas: 1
       resources:
@@ -51,6 +51,37 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  sidekiq:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    image: my_app:production
+    container_name: my_app_sidekiq_prod
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rails:
+        condition: service_healthy
+    command: bundle exec sidekiq -C config/sidekiq.yml
+    volumes: []
+    env_file:
+      - .env
+      - docker/environments/production.env
+    environment:
+      - RAILS_ENV=production
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-my_app_production}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - SKIP_DB_PREPARE=true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   db:
     image: postgres:16-alpine
     container_name: my_app_db_prod
@@ -61,7 +92,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-my_app_production}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    # Em produção: NÃO expor porta ao exterior
+    # In production: do NOT expose DB port externally
     expose:
       - "5432"
     healthcheck:
@@ -80,18 +111,18 @@ services:
     expose:
       - "6379"
 
-  # Mailpit NÃO existe em produção
+  # Mailpit does not run in production
   mailpit:
     profiles:
       - donotstart
 
-  # Nginx reverse proxy para produção
+  # Nginx reverse proxy for production
   nginx:
     image: nginx:alpine
     container_name: my_app_nginx
     restart: always
     depends_on:
-      - web
+      - rails
     ports:
       - "80:80"
       - "443:443"

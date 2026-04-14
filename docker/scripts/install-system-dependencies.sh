@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # =============================================================================
 # docker/scripts/install-system-dependencies.sh
-# Instala dependências de sistema necessárias para o projecto Rails.
-# Executado no entrypoint — usa cache para não reinstalar se já estiver feito.
+# Install system dependencies required by the Rails project.
+# Executed from entrypoint - uses cache to avoid reinstalling.
 # =============================================================================
 
 set -e
@@ -19,15 +19,15 @@ log_skip()    { echo -e "${YELLOW}[DEPS]${NC} $1"; }
 DEPS_STAMP="/tmp/.system-deps-installed"
 
 if [ -f "${DEPS_STAMP}" ]; then
-  log_skip "Dependencias de sistema ja instaladas. A saltar."
+  log_skip "System dependencies already installed. Skipping."
   exit 0
 fi
 
-log_info "A instalar dependencias de sistema..."
+log_info "Installing system dependencies..."
 
 apt-get update -qq
 
-# Build e compilacao
+# Build and compilation
 apt-get install -y --no-install-recommends \
   build-essential \
   gcc \
@@ -37,7 +37,7 @@ apt-get install -y --no-install-recommends \
   autoconf \
   automake
 
-# Sistema e runtime
+# System and runtime
 apt-get install -y --no-install-recommends \
   curl \
   wget \
@@ -52,7 +52,7 @@ apt-get install -y --no-install-recommends \
   libpq-dev \
   postgresql-client
 
-# SSL e rede
+# SSL and network
 apt-get install -y --no-install-recommends \
   libssl-dev \
   libffi-dev \
@@ -63,7 +63,7 @@ apt-get install -y --no-install-recommends \
   libxml2-dev \
   libxslt1-dev
 
-# Imagens (ActiveStorage + image_processing)
+# Images (ActiveStorage + image_processing)
 apt-get install -y --no-install-recommends \
   libvips42 \
   imagemagick \
@@ -73,26 +73,26 @@ apt-get install -y --no-install-recommends \
 
 # Node.js 20 LTS
 if ! command -v node &> /dev/null; then
-  log_info "A instalar Node.js 20 LTS..."
+  log_info "Installing Node.js 20 LTS..."
   curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
   apt-get install -y --no-install-recommends nodejs
-  log_success "Node.js $(node --version) instalado."
+  log_success "Node.js $(node --version) installed."
 else
-  log_skip "Node.js ja instalado: $(node --version)"
+  log_skip "Node.js already installed: $(node --version)"
 fi
 
 # Yarn
 if ! command -v yarn &> /dev/null; then
-  log_info "A instalar Yarn..."
+  log_info "Installing Yarn..."
   npm install -g yarn
-  log_success "Yarn $(yarn --version) instalado."
+  log_success "Yarn $(yarn --version) installed."
 else
-  log_skip "Yarn ja instalado: $(yarn --version)"
+  log_skip "Yarn already installed: $(yarn --version)"
 fi
 
-# Limpeza
+# Cleanup
 apt-get clean
 rm -rf /var/lib/apt/lists/*
 
 touch "${DEPS_STAMP}"
-log_success "Dependencias de sistema instaladas com sucesso."
+log_success "System dependencies installed successfully."
