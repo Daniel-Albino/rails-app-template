@@ -8,9 +8,9 @@ Rails.application.routes.draw do
 
   # Sidekiq Web UI
   require "sidekiq/web"
-  if Rails.env.production?
-    sidekiq_username = ENV.fetch("SIDEKIQ_USERNAME")
-    sidekiq_password = ENV.fetch("SIDEKIQ_PASSWORD")
+  if Rails.env.production? && ENV["SIDEKIQ_USERNAME"].present? && ENV["SIDEKIQ_PASSWORD"].present?
+    sidekiq_username = ENV["SIDEKIQ_USERNAME"]
+    sidekiq_password = ENV["SIDEKIQ_PASSWORD"]
 
     Sidekiq::Web.use Rack::Auth::Basic do |username, password|
       username_ok = ActiveSupport::SecurityUtils.secure_compare(
@@ -24,8 +24,8 @@ Rails.application.routes.draw do
 
       username_ok && password_ok
     end
+    mount Sidekiq::Web => "/sidekiq"
   end
-  mount Sidekiq::Web => "/sidekiq"
 
   # PWA routes (Rails 8)
   get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
