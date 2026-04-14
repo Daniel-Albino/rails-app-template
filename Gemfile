@@ -15,7 +15,7 @@ gem "pg", "~> 1.1"
 
 # Cache & background jobs
 gem "redis", "~> 5.0"
-gem "sidekiq", "~> 7.0"
+gem "sidekiq", "~> 8.0"
 
 # Assets & frontend (native Rails 8 stack)
 gem "importmap-rails"

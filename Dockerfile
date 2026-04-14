@@ -35,7 +35,10 @@ RUN apt-get update -qq && \
 
 # Install Oh My Zsh
 RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
-RUN echo 'export PATH="/usr/local/bundle/bin:$PATH"' >> /root/.zshrc
+
+# Configure zsh theme and PATH
+RUN sed -i 's/^ZSH_THEME="robbyrussell"/ZSH_THEME="robbyrussell"/' /root/.zshrc && \
+    echo 'export PATH="/usr/local/bundle/bin:$PATH"' >> /root/.zshrc
 
 RUN ln -s /app/.irbrc /root/.irbrc
 
