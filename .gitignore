@@ -18,13 +18,9 @@
 # Locally installed gems
 /vendor/bundle
 
-# Node modules
-/node_modules
 
 # Compiled assets
 /public/assets
-/public/packs
-/public/packs-test
 
 # Storage (uploads, etc.)
 /storage/*
@@ -33,8 +29,6 @@
 # Boot
 /tmp/pids/*.pid
 
-# Setup flag
-setupcomplete
 
 # IDEs
 .vscode/
@@ -51,5 +45,4 @@ setupcomplete
 # Byebug history
 .byebug_history
 
-# Yarn integrity
-.yarn-integrity
+.rspec_status

@@ -3,6 +3,10 @@
 # Ensure the database is clean between tests.
 # =============================================================================
 
+# Inside Docker the database host is "db", which DatabaseCleaner's safeguard
+# treats as a remote URL. The test database name check still protects us.
+DatabaseCleaner.allow_remote_database_url = true
+
 RSpec.configure do |config|
   config.before(:suite) do
     DatabaseCleaner.strategy = :transaction

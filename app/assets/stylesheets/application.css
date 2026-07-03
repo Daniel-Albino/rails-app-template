@@ -2,8 +2,8 @@
  * app/assets/stylesheets/application.css
  * Main application stylesheet.
  *
- * If using TailwindCSS, rename to application.tailwind.css
- * and run: yarn build:css
+ * Served by propshaft. For TailwindCSS, add the tailwindcss-rails gem
+ * (no Node required): bundle add tailwindcss-rails && rails tailwindcss:install
  */
 
 /* Basic reset */

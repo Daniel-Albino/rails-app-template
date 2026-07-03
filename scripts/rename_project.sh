@@ -1,24 +1,28 @@
 #!/usr/bin/env bash
 # =============================================================================
 # scripts/rename_project.sh
-# Rename template project from "my_app" to a new name.
+# Rename the template project to a new name.
+#
+# The current name is auto-detected from config/application.rb, so the script
+# works no matter how many times the project has been renamed.
 #
 # Usage:
 #   bash scripts/rename_project.sh new_project_name
-#   bash scripts/rename_project.sh new_project_name --yes
-#   bash scripts/rename_project.sh new_project_name --dry-run
+#   bash scripts/rename_project.sh new_project_name --yes      # no confirmation
+#   bash scripts/rename_project.sh new_project_name --dry-run  # preview only
 #
 # Example:
 #   bash scripts/rename_project.sh awesome_saas
 #
-# This script will:
-#   1. Validate the new name
-#   2. Replace name references across text files
-#   3. Rename relevant files/directories
-#   4. Refresh .env from .env.example when missing
+# What it does:
+#   1. Detects the current project name (snake_case, CamelCase, human)
+#   2. Validates the new name
+#   3. Replaces all references across tracked text files (single pass)
+#   4. Renames project-specific files (nginx vhost)
+#   5. Creates .env from .env.example when missing
 # =============================================================================
 
-set -e
+set -euo pipefail
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -34,12 +38,11 @@ log_warning() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 log_error()   { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 log_step()    { echo -e "\n${CYAN}${BOLD}>> $1${NC}"; }
 
-if [ -z "$1" ]; then
-  log_error "Usage: bash scripts/rename_project.sh <new_name>\nExample: bash scripts/rename_project.sh awesome_saas"
-fi
+cd "$(dirname "$0")/.."
+
+[ $# -ge 1 ] || log_error "Usage: bash scripts/rename_project.sh <new_name> [--yes] [--dry-run]"
 
 NEW_NAME="$1"
-OLD_NAME="my_app"
 AUTO_CONFIRM=false
 DRY_RUN=false
 
@@ -50,25 +53,31 @@ for arg in "$@"; do
   esac
 done
 
-# Validate format: lowercase letters, numbers, underscores
+# -----------------------------------------------------------------------------
+# Detect current name from config/application.rb (module MyApp -> my_app)
+# -----------------------------------------------------------------------------
+[ -f "config/application.rb" ] || log_error "config/application.rb not found. Run from the project root."
+
+OLD_CAMEL=$(sed -n 's/^module \([A-Za-z0-9]*\)$/\1/p' config/application.rb | head -1)
+[ -n "${OLD_CAMEL}" ] || log_error "Could not detect the application module in config/application.rb"
+
+# CamelCase -> snake_case (MyAwesomeApp -> my_awesome_app)
+OLD_NAME=$(echo "${OLD_CAMEL}" | sed 's/\([A-Z]\)/_\L\1/g;s/^_//')
+
+# Validate new name: lowercase letters, numbers, underscores, starts with letter
 if [[ ! "${NEW_NAME}" =~ ^[a-z][a-z0-9_]*$ ]]; then
   log_error "Invalid name: '${NEW_NAME}'\nUse lowercase letters, numbers, and underscores only. Must start with a letter."
 fi
 
 if [ "${NEW_NAME}" = "${OLD_NAME}" ]; then
-  log_warning "New name is the same as current name ('${OLD_NAME}'). Nothing to do."
+  log_warning "New name is the same as the current name ('${OLD_NAME}'). Nothing to do."
   exit 0
 fi
 
 # snake_case -> CamelCase (my_awesome_app -> MyAwesomeApp)
-to_camel_case() {
-  echo "$1" | sed 's/_\([a-z]\)/\U\1/g;s/^\([a-z]\)/\U\1/'
-}
+NEW_CAMEL=$(echo "${NEW_NAME}" | sed 's/_\([a-z0-9]\)/\U\1/g;s/^\([a-z]\)/\U\1/')
 
-OLD_CAMEL="MyApp"
-NEW_CAMEL=$(to_camel_case "${NEW_NAME}")
-
-# Human-readable label (my_app -> My App)
+# snake_case -> Human (my_app -> My App)
 OLD_HUMAN=$(echo "${OLD_NAME}" | sed 's/_/ /g;s/\b\(.\)/\u\1/g')
 NEW_HUMAN=$(echo "${NEW_NAME}" | sed 's/_/ /g;s/\b\(.\)/\u\1/g')
 
@@ -81,131 +90,81 @@ echo -e "  snake_case : ${RED}${OLD_NAME}${NC} -> ${GREEN}${NEW_NAME}${NC}"
 echo -e "  CamelCase  : ${RED}${OLD_CAMEL}${NC} -> ${GREEN}${NEW_CAMEL}${NC}"
 echo -e "  Human      : ${RED}${OLD_HUMAN}${NC} -> ${GREEN}${NEW_HUMAN}${NC}"
 echo ""
-if [ "${AUTO_CONFIRM}" = false ]; then
-  read -p "$(echo -e "${YELLOW}Continue? (y/N):${NC} ")" CONFIRM
+
+if [ "${AUTO_CONFIRM}" = false ] && [ "${DRY_RUN}" = false ]; then
+  read -r -p "$(echo -e "${YELLOW}Continue? (y/N):${NC} ")" CONFIRM
   if [[ ! "${CONFIRM}" =~ ^[yY]$ ]]; then
     log_warning "Operation cancelled."
     exit 0
   fi
 fi
 
-replace_in_file() {
-  local file="$1"
-  if [ "${DRY_RUN}" = true ]; then
-    log_info "[DRY-RUN] Would update: ${file}"
-    return
-  fi
+# -----------------------------------------------------------------------------
+# STEP 1 - Replace references in all tracked text files (single pass)
+# -----------------------------------------------------------------------------
+log_step "STEP 1 - Replacing references in project files..."
 
-  perl -0pi -e "s/\Q${OLD_NAME}\E/${NEW_NAME}/g; s/\Q${OLD_CAMEL}\E/${NEW_CAMEL}/g; s/\Q${OLD_HUMAN}\E/${NEW_HUMAN}/g;" "${file}"
-  log_success "Updated: ${file}"
+# Candidate files: git-tracked plus .env (untracked). Excludes this script
+# (its examples/defaults must stay intact) and binary/lock/vendor content.
+list_files() {
+  {
+    if command -v git > /dev/null 2>&1 && git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
+      git ls-files
+    else
+      find . -type f \
+        -not -path "./.git/*" -not -path "./node_modules/*" -not -path "./vendor/*" \
+        -not -path "./tmp/*" -not -path "./log/*" -not -path "./storage/*" \
+        | sed 's|^\./||'
+    fi
+    [ -f ".env" ] && echo ".env"
+  } | grep -v -e "^scripts/rename_project.sh$" | sort -u
 }
 
-log_step "STEP 1 - Replacing references in text files..."
-
-FILES_TO_PROCESS=(
-  "Dockerfile"
-  "docker-compose.yml"
-  "docker-compose.prod.yml"
-  ".env.example"
-  ".env"
-  ".dockerignore"
-  "Gemfile"
-  "Gemfile.lock"
-  "Rakefile"
-  "config.ru"
-  "Procfile.dev"
-  "config/application.rb"
-  "config/environment.rb"
-  "config/routes.rb"
-  "config/database.yml"
-  "config/cable.yml"
-  "config/puma.rb"
-  "config/sidekiq.yml"
-  "config/storage.yml"
-  "config/importmap.rb"
-  "config/environments/development.rb"
-  "config/environments/production.rb"
-  "config/environments/test.rb"
-  "config/initializers/sidekiq.rb"
-  "config/initializers/filter_parameter_logging.rb"
-  "config/initializers/content_security_policy.rb"
-  "config/initializers/inflections.rb"
-  "config/locales/en.yml"
-  "package.json"
-  "yarn.lock"
-  "bin/setup"
-  "bin/docker-entrypoint"
-  "lib/tasks/db.rake"
-  "lib/tasks/docker.rake"
-  "docker/environments/development.env"
-  "docker/environments/production.env"
-  "docker/entrypoints/entrypoint.sh"
-  "docker/scripts/install-system-dependencies.sh"
-  "docker/scripts/wait-for-db.sh"
-  "docker/scripts/ci-test.sh"
-  "docker/scripts/deploy.sh"
-  "docker/nginx/nginx.conf"
-  "docker/nginx/conf.d/my_app.conf"
-  ".github/workflows/ci.yml"
-  "app/helpers/application_helper.rb"
-  "app/mailers/application_mailer.rb"
-  "app/views/layouts/application.html.erb"
-  "app/views/layouts/mailer.html.erb"
-  "app/views/layouts/mailer.text.erb"
-  "app/views/shared/_flash.html.erb"
-  "db/seeds.rb"
-  "README.md"
-)
-
-for file in "${FILES_TO_PROCESS[@]}"; do
-  if [ -f "${file}" ]; then
-    replace_in_file "${file}"
-  else
-    log_warning "Not found (skipped): ${file}"
-  fi
-done
-
-log_step "STEP 2 - Applying recursive replacements in common source files..."
+CHANGED=0
 while IFS= read -r file; do
-  case "${file}" in
-    node_modules/*|vendor/*|tmp/*|log/*|storage/*|.git/*) continue ;;
-  esac
-  replace_in_file "${file}"
-done < <(rg --files \
-  -g "*.rb" -g "*.yml" -g "*.yaml" -g "*.md" -g "*.sh" -g "*.json" -g "*.erb" -g "*.env" \
-  -g "!node_modules/**" -g "!vendor/**" -g "!tmp/**" -g "!log/**" -g "!storage/**" -g "!.git/**")
+  [ -f "${file}" ] || continue
+  # Skip binary files
+  grep -Iq . "${file}" 2>/dev/null || continue
+  # Skip files without any reference to the old name
+  if ! grep -q -e "${OLD_NAME}" -e "${OLD_CAMEL}" -e "${OLD_HUMAN}" "${file}"; then
+    continue
+  fi
 
-log_step "STEP 3 - Renaming project-specific files..."
+  if [ "${DRY_RUN}" = true ]; then
+    log_info "[DRY-RUN] Would update: ${file}"
+  else
+    perl -0pi -e "s/\Q${OLD_NAME}\E/${NEW_NAME}/g; s/\Q${OLD_CAMEL}\E/${NEW_CAMEL}/g; s/\Q${OLD_HUMAN}\E/${NEW_HUMAN}/g;" "${file}"
+    log_success "Updated: ${file}"
+  fi
+  CHANGED=$((CHANGED + 1))
+done < <(list_files)
+
+[ "${CHANGED}" -gt 0 ] || log_warning "No files contained '${OLD_NAME}'. Was the project already renamed?"
+
+# -----------------------------------------------------------------------------
+# STEP 2 - Rename project-specific files
+# -----------------------------------------------------------------------------
+log_step "STEP 2 - Renaming project-specific files..."
+
 if [ -f "docker/nginx/conf.d/${OLD_NAME}.conf" ]; then
   if [ "${DRY_RUN}" = true ]; then
     log_info "[DRY-RUN] Would rename docker/nginx/conf.d/${OLD_NAME}.conf -> ${NEW_NAME}.conf"
   else
-    mv "docker/nginx/conf.d/${OLD_NAME}.conf" "docker/nginx/conf.d/${NEW_NAME}.conf"
+    if command -v git > /dev/null 2>&1 && git ls-files --error-unmatch "docker/nginx/conf.d/${OLD_NAME}.conf" > /dev/null 2>&1; then
+      git mv "docker/nginx/conf.d/${OLD_NAME}.conf" "docker/nginx/conf.d/${NEW_NAME}.conf"
+    else
+      mv "docker/nginx/conf.d/${OLD_NAME}.conf" "docker/nginx/conf.d/${NEW_NAME}.conf"
+    fi
     log_success "Renamed: docker/nginx/conf.d/${OLD_NAME}.conf -> ${NEW_NAME}.conf"
   fi
+else
+  log_info "No nginx vhost to rename."
 fi
 
-if [ -d "tmp/${OLD_NAME}" ]; then
-  if [ "${DRY_RUN}" = true ]; then
-    log_info "[DRY-RUN] Would rename tmp/${OLD_NAME} -> tmp/${NEW_NAME}"
-  else
-    mv "tmp/${OLD_NAME}" "tmp/${NEW_NAME}"
-    log_success "Renamed: tmp/${OLD_NAME} -> tmp/${NEW_NAME}"
-  fi
-fi
-
-log_step "STEP 4 - Cleaning setup markers..."
-
-if [ -f "setupcomplete" ]; then
-  if [ "${DRY_RUN}" = true ]; then
-    log_info "[DRY-RUN] Would remove setupcomplete"
-  else
-    rm -f "setupcomplete"
-    log_success "Removed 'setupcomplete' (setup will run on next boot)."
-  fi
-fi
-
-log_step "STEP 5 - Validating .env..."
+# -----------------------------------------------------------------------------
+# STEP 3 - Ensure .env exists
+# -----------------------------------------------------------------------------
+log_step "STEP 3 - Validating .env..."
 
 if [ ! -f ".env" ]; then
   if [ "${DRY_RUN}" = true ]; then
@@ -216,8 +175,7 @@ if [ ! -f ".env" ]; then
     log_warning "Update .env with real credentials."
   fi
 else
-  log_warning ".env already exists. Updating app-name references..."
-  replace_in_file ".env"
+  log_info ".env already exists (references updated in STEP 1)."
 fi
 
 echo ""
@@ -234,6 +192,6 @@ echo -e "  New name      : ${GREEN}${NEW_NAME}${NC}"
 echo ""
 echo -e "${YELLOW}Next steps:${NC}"
 echo -e "  1. Check ${CYAN}.env${NC} and set real credentials"
-echo -e "  2. Run: ${CYAN}docker compose down -v${NC} (clear old volumes)"
+echo -e "  2. Run: ${CYAN}docker compose down -v${NC} (clear volumes from the old name)"
 echo -e "  3. Run: ${CYAN}docker compose up --build${NC}"
 echo ""

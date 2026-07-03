@@ -6,11 +6,8 @@ Rails.application.configure do
   config.action_controller.perform_caching = true
   config.public_file_server.enabled = ENV["RAILS_SERVE_STATIC_FILES"].present?
 
-  config.cache_store = if ENV["SECRET_KEY_BASE"].present? && !ENV["ASSETS_PRECOMPILE"].present?
-                         [:redis_cache_store, ENV.fetch("REDIS_URL", "redis://localhost:6379/0")]
-                       else
-                         :null_store
-                       end
+  # Redis cache store connects lazily, so it is safe during assets:precompile.
+  config.cache_store = :redis_cache_store, { url: ENV.fetch("REDIS_URL", "redis://localhost:6379/0") }
 
   # Production should use external object storage (for example: amazon, google, azure).
   config.active_storage.service = ENV.fetch("ACTIVE_STORAGE_SERVICE", "amazon").to_sym

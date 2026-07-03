@@ -30,15 +30,4 @@ namespace :db do
     end
     puts ""
   end
-
-  desc "Remove setupcomplete file (forces db:prepare on next boot)"
-  task force_setup: :environment do
-    setup_file = Rails.root.join("setupcomplete")
-    if File.exist?(setup_file)
-      File.delete(setup_file)
-      puts "'setupcomplete' removed. Next boot will run db:prepare."
-    else
-      puts "'setupcomplete' does not exist."
-    end
-  end
 end

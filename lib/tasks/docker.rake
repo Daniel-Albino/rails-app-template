@@ -19,8 +19,6 @@ namespace :docker do
     puts "  Environment: #{Rails.env}"
     puts "  DB URL:      #{ENV['DATABASE_URL'] || 'not set'}"
     puts "  Redis URL:   #{ENV['REDIS_URL'] || 'not set'}"
-    puts "  Node:       #{`node --version 2>/dev/null`.strip}"
-    puts "  Yarn:       #{`yarn --version 2>/dev/null`.strip}"
     puts ""
   end
 

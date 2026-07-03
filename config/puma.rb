@@ -1,6 +1,7 @@
 # =============================================================================
 # config/puma.rb
 # Puma server configuration.
+# Single mode in development; clustered in production via WEB_CONCURRENCY.
 # =============================================================================
 
 # Thread count per worker
@@ -10,7 +11,13 @@ threads min_threads_count, max_threads_count
 
 # Workers in production (separate processes)
 worker_count = ENV.fetch("WEB_CONCURRENCY", 2).to_i
-workers worker_count if worker_count > 1 && !ENV["RAILS_ENV"].to_s.start_with?("development")
+if worker_count > 1 && !ENV["RAILS_ENV"].to_s.start_with?("development")
+  workers worker_count
+
+  # Preload app for copy-on-write memory savings with multiple workers.
+  # Rails 8 handles reconnecting Active Record after fork automatically.
+  preload_app!
+end
 
 # Port
 port ENV.fetch("PORT", 3000)
@@ -21,13 +28,5 @@ environment ENV.fetch("RAILS_ENV", "development")
 # PID file
 pidfile ENV.fetch("PIDFILE", "tmp/pids/server.pid")
 
-# Worker management plugin
+# Allow `rails restart` to restart Puma
 plugin :tmp_restart
-
-# Preload app for better performance with multiple workers
-preload_app!
-
-# Reconnect DB after fork (with multiple workers)
-on_worker_boot do
-  ActiveRecord::Base.establish_connection if defined?(ActiveRecord)
-end

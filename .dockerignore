@@ -32,11 +32,7 @@ storage/
 
 # Assets compilados (gerados no build)
 public/assets
-public/packs
-public/packs-test
 
-# Node modules (instalados no container)
-node_modules/
 
 # Bundle (instalado no container)
 vendor/bundle
@@ -76,5 +72,3 @@ spec/
 test/
 features/
 
-# Setup marker file (generated at runtime)
-setupcomplete

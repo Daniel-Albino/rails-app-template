@@ -1,18 +1,25 @@
 #!/usr/bin/env bash
 # =============================================================================
 # docker/entrypoints/entrypoint.sh
-# Main Rails container entrypoint.
-# Runs every time the container starts.
+# Main Rails container entrypoint. Runs every time the container starts.
+#
+# Database setup is fully idempotent: `rails db:prepare` creates the database
+# if it does not exist, loads the schema on first boot, and runs pending
+# migrations on subsequent boots. No marker files needed.
+#
+# Environment knobs:
+#   SKIP_DB_PREPARE=true   - skip database preparation (e.g. sidekiq container)
+#   DB_WAIT_MAX_ATTEMPTS   - max attempts waiting for PostgreSQL (default: 30)
+#   DB_WAIT_SECONDS        - seconds between attempts (default: 2)
 # =============================================================================
 
-set -e  # Exit immediately on command failure
+set -e
 
-# Colored output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
 log_info()    { echo -e "${BLUE}[INFO]${NC} $1"; }
 log_success() { echo -e "${GREEN}[OK]${NC} $1"; }
@@ -20,85 +27,73 @@ log_warning() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 log_error()   { echo -e "${RED}[ERROR]${NC} $1"; }
 
 APP_HOME=${APP_HOME:-/app}
-SETUP_FILE="${APP_HOME}/setupcomplete"
-
-# =============================================================================
-# STEP 1 - Install system dependencies (if needed)
-# =============================================================================
-if [ -f /usr/local/bin/install-system-dependencies.sh ]; then
-  log_info "Checking system dependencies..."
-  /usr/local/bin/install-system-dependencies.sh
-fi
-
-# =============================================================================
-# STEP 2 - Bundle install
-# Ensure all gems are installed/updated.
-# =============================================================================
-log_info "Checking gems (bundle install)..."
 cd "${APP_HOME}"
 
-bundle check || bundle install --jobs="${BUNDLE_JOBS:-4}" --retry="${BUNDLE_RETRY:-3}"
+# =============================================================================
+# STEP 1 - Gems
+# In production the image already ships all gems (bundle check is a no-op).
+# In development (source mounted as a volume) install anything missing.
+# =============================================================================
+log_info "Checking gems..."
+if ! bundle check > /dev/null 2>&1; then
+  log_warning "Gems missing. Running bundle install..."
+  bundle install --jobs="${BUNDLE_JOBS:-4}" --retry="${BUNDLE_RETRY:-3}"
+fi
 log_success "Gems ready."
 
 # =============================================================================
-# STEP 3 - Yarn install (if package.json exists)
-# =============================================================================
-if [ -f "${APP_HOME}/package.json" ]; then
-  log_info "Checking Node dependencies (yarn install)..."
-  yarn install --check-files 2>/dev/null || yarn install
-  log_success "Node modules ready."
-fi
-
-# =============================================================================
-# STEP 4 - Remove stale server.pid (prevents restart crash)
+# STEP 2 - Remove stale server.pid (prevents restart crash)
 # =============================================================================
 PID_FILE="${APP_HOME}/tmp/pids/server.pid"
 if [ -f "${PID_FILE}" ]; then
-  log_warning "server.pid file found. Removing..."
+  log_warning "Stale server.pid found. Removing..."
   rm -f "${PID_FILE}"
-  log_success "server.pid removed."
 fi
 
 # =============================================================================
-# STEP 5 - Initial database setup
-# Run rails db:prepare only on first boot (when setupcomplete does not exist).
-# On later boots, only run pending migrations.
+# STEP 3 - Database preparation (idempotent)
 # =============================================================================
-
-# Wait for PostgreSQL using pg_isready (fast, no Rails boot needed)
 wait_for_db() {
   local host="${POSTGRES_HOST:-db}"
   local port="${POSTGRES_PORT:-5432}"
   local user="${POSTGRES_USER:-postgres}"
+  local max_attempts="${DB_WAIT_MAX_ATTEMPTS:-30}"
+  local wait_seconds="${DB_WAIT_SECONDS:-2}"
+  local attempt=0
 
   log_info "Waiting for PostgreSQL at ${host}:${port}..."
   until pg_isready -h "${host}" -p "${port}" -U "${user}" -q; do
-    sleep 1
+    attempt=$((attempt + 1))
+    if [ "${attempt}" -ge "${max_attempts}" ]; then
+      log_error "PostgreSQL not available after ${max_attempts} attempts. Aborting."
+      exit 1
+    fi
+    sleep "${wait_seconds}"
   done
-  log_success "Database available."
+  log_success "PostgreSQL available."
 }
 
-if [ "${RAILS_ENV}" != "test" ] && [ "${SKIP_DB_PREPARE:-false}" != "true" ]; then
+if [ "${SKIP_DB_PREPARE:-false}" != "true" ]; then
   wait_for_db
 
-  if [ ! -f "${SETUP_FILE}" ]; then
-    log_info "First run detected. Preparing database..."
-
-    # db:prepare creates DB if missing, or runs migrations if schema exists
-    bundle exec rails db:prepare --trace
-
-    touch "${SETUP_FILE}"
-    log_success "Database prepared. 'setupcomplete' created."
+  # db:prepare does the right thing in every scenario:
+  #   - database missing        -> create + load schema + seed
+  #   - schema not loaded       -> load schema
+  #   - pending migrations      -> migrate
+  #   - everything up to date   -> no-op
+  log_info "Preparing database (rails db:prepare)..."
+  if bundle exec rails db:prepare; then
+    log_success "Database ready."
   else
-    log_info "Previous setup detected. Running pending migrations only..."
-    bundle exec rails db:migrate 2>/dev/null || log_warning "No migration changes or non-critical migration issue."
-    log_success "Migrations checked."
+    log_error "Database preparation failed. Check the output above."
+    exit 1
   fi
+else
+  log_info "SKIP_DB_PREPARE=true - skipping database preparation."
 fi
 
 # =============================================================================
-# STEP 6 - Run the container command
-# Example: "bundle exec rails server -b 0.0.0.0 -p 3000"
+# STEP 4 - Run the container command
 # =============================================================================
 log_success "Container ready. Starting: $*"
 echo ""

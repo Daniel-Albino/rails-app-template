@@ -1,39 +1,39 @@
 # =============================================================================
-# Gemfile - Rails 8.0 tested compatible stack
+# Gemfile - Rails 8.1 tested compatible stack
 # =============================================================================
 
 source "https://rubygems.org"
 
-ruby "3.3.6"
+ruby file: ".ruby-version"
 
 # Core
-gem "puma", ">= 5.0"
-gem "rails", "~> 8.0.0"
+gem "puma", "~> 8.0"
+gem "rails", "~> 8.1.3"
 
 # Database
-gem "pg", "~> 1.1"
+gem "pg", "~> 1.6"
 
 # Cache & background jobs
-gem "redis", "~> 5.0"
-gem "sidekiq", "~> 8.0"
+gem "redis", "~> 5.4"
+gem "sidekiq", "~> 8.1"
 
-# Assets & frontend (native Rails 8 stack)
+# Assets & frontend (native Rails 8 stack, no Node required)
 gem "importmap-rails"
 gem "propshaft"
 gem "stimulus-rails"
 gem "turbo-rails"
 
 # Authentication
-gem "bcrypt", "~> 3.1.7"
+gem "bcrypt", "~> 3.1"
 
 # Utilities
 gem "bootsnap", require: false
 gem "tzinfo-data", platforms: %i[windows jruby]
 
 # Image processing (ActiveStorage)
-gem "image_processing", "~> 1.2"
+gem "image_processing", "~> 1.14"
 
-gem "amazing_print", "~> 1.4.0"
+gem "amazing_print", "~> 2.0"
 
 group :development, :test do
   gem "brakeman", require: false
@@ -42,7 +42,7 @@ group :development, :test do
   gem "dotenv-rails"
   gem "factory_bot_rails"
   gem "faker"
-  gem "rspec-rails", "~> 7.0"
+  gem "rspec-rails", "~> 8.0"
   gem "rubocop", require: false
   gem "rubocop-rails-omakase", require: false
 end

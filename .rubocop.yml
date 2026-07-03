@@ -1,15 +1,11 @@
 AllCops:
   NewCops: enable
   SuggestExtensions: false
-  TargetRubyVersion: 3.3
+  TargetRubyVersion: 3.4
   Exclude:
     - "db/schema.rb"
     - "db/migrate/**/*"
-    - "bin/bundle"
-    - "bin/rails"
-    - "bin/rake"
-    - "bin/setup"
-    - "bin/docker-entrypoint"
+    - "bin/**/*"
     - "vendor/**/*"
     - "node_modules/**/*"
 

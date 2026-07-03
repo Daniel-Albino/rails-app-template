@@ -5,7 +5,7 @@ Bundler.require(*Rails.groups)
 
 module MyApp
   class Application < Rails::Application
-    config.load_defaults 8.0
+    config.load_defaults 8.1
 
     config.time_zone = "Lisbon"
     config.active_record.default_timezone = :utc
@@ -20,9 +20,5 @@ module MyApp
       passw secret token _key crypt salt certificate
       otp ssn cvv cvc credit_card
     ]
-
-    config.console do
-      Rails.application.config.irb_prompt = :CUSTOM
-    end
   end
 end

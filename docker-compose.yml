@@ -15,7 +15,6 @@ services:
       dockerfile: Dockerfile
       target: development          # Use development stage
     image: my_app:development
-    container_name: my_app_rails
     restart: unless-stopped
     depends_on:
       db:
@@ -29,14 +28,11 @@ services:
       - .:/app
       # Persist gems outside app volume (avoid conflicts)
       - bundle_cache:/usr/local/bundle
-      # Persist Node modules
-      - node_modules_cache:/app/node_modules
     env_file:
       - .env
       - docker/environments/development.env
     environment:
       - RAILS_ENV=development
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-my_app_development}
       - REDIS_URL=redis://redis:6379/0
       - PATH=/usr/local/bundle/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     healthcheck:
@@ -59,7 +55,6 @@ services:
       dockerfile: Dockerfile
       target: development
     image: my_app:development
-    container_name: my_app_sidekiq
     restart: unless-stopped
     depends_on:
       db:
@@ -72,13 +67,11 @@ services:
     volumes:
       - .:/app
       - bundle_cache:/usr/local/bundle
-      - node_modules_cache:/app/node_modules
     env_file:
       - .env
       - docker/environments/development.env
     environment:
       - RAILS_ENV=development
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-my_app_development}
       - REDIS_URL=redis://redis:6379/0
       - SKIP_DB_PREPARE=true
     networks:
@@ -88,8 +81,7 @@ services:
   # DB - PostgreSQL
   # ---------------------------------------------------------------------------
   db:
-    image: postgres:16-alpine
-    container_name: my_app_db
+    image: postgres:17-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
@@ -113,10 +105,9 @@ services:
   # Redis - Cache and Action Cable
   # ---------------------------------------------------------------------------
   redis:
-    image: redis:7-alpine
-    container_name: my_app_redis
+    image: redis:8-alpine
     restart: unless-stopped
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy noeviction
     volumes:
       - redis_data:/data
     ports:
@@ -136,7 +127,6 @@ services:
   # ---------------------------------------------------------------------------
   mailpit:
     image: axllent/mailpit:latest
-    container_name: my_app_mailpit
     restart: unless-stopped
     ports:
       - "1025:1025"   # SMTP
@@ -156,8 +146,6 @@ volumes:
   redis_data:
     driver: local
   bundle_cache:
-    driver: local
-  node_modules_cache:
     driver: local
 
 # =============================================================================

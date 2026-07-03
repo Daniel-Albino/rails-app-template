@@ -1,15 +1,12 @@
 # =============================================================================
 # STAGE 1: base
 # Base image shared by development and production.
-# Installs system dependencies and configures Ruby environment.
+# Runtime-only system dependencies. No build tools, no Node (importmap stack).
 # =============================================================================
-FROM ruby:3.3.6-slim AS base
+FROM ruby:3.4.10-slim AS base
 
-# Build arguments
-ARG APP_USER=rails
 ARG APP_HOME=/app
 
-# Base environment variables
 ENV LANG=C.UTF-8 \
     LC_ALL=C.UTF-8 \
     BUNDLE_PATH=/usr/local/bundle \
@@ -22,88 +19,77 @@ ENV LANG=C.UTF-8 \
 
 WORKDIR ${APP_HOME}
 
-# Install minimal base system dependencies
+# Runtime dependencies:
+#   libpq5             - PostgreSQL client library (pg gem)
+#   postgresql-client  - pg_isready used by the entrypoint
+#   libvips42          - image_processing / ActiveStorage variants
+#   libjemalloc2       - memory allocator (less fragmentation under Puma/Sidekiq)
+#   libyaml-0-2        - psych
 RUN apt-get update -qq && \
     apt-get install -y --no-install-recommends \
       curl \
-      gnupg2 \
-      zsh \
-      git \
       ca-certificates \
-      libpq5 && \
+      libpq5 \
+      postgresql-client \
+      libvips42 \
+      libjemalloc2 \
+      libyaml-0-2 && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Oh My Zsh
-RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
-
-# Configure zsh theme and PATH
-RUN sed -i 's/^ZSH_THEME="robbyrussell"/ZSH_THEME="robbyrussell"/' /root/.zshrc && \
-    echo 'export PATH="/usr/local/bundle/bin:$PATH"' >> /root/.zshrc
-
-RUN ln -s /app/.irbrc /root/.irbrc
+# Use jemalloc for all Ruby processes
+ENV LD_PRELOAD=libjemalloc.so.2
 
 # =============================================================================
-# STAGE 2: dependencies
-# Install all build dependencies (gems + node_modules).
-# Kept separate to maximize Docker cache reuse.
+# STAGE 2: build
+# Compiles native gems. Never ships in the final images.
 # =============================================================================
-FROM base AS dependencies
+FROM base AS build
 
-# Install build dependencies
 RUN apt-get update -qq && \
     apt-get install -y --no-install-recommends \
       build-essential \
-      libpq-dev \
-      libssl-dev \
-      libxml2-dev \
-      libxslt1-dev \
       git \
+      libpq-dev \
+      libyaml-dev \
       pkg-config && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Node.js 20 LTS + Yarn
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
-    apt-get install -y --no-install-recommends nodejs && \
-    npm install -g yarn && \
-    rm -rf /var/lib/apt/lists/*
+# =============================================================================
+# STAGE 3: dev-gems
+# All gem groups (development + test included).
+# =============================================================================
+FROM build AS dev-gems
 
-# Copy dependency files first for better caching
-COPY Gemfile Gemfile.lock* ./
-
-# Install gems (cached if Gemfile does not change)
+COPY .ruby-version Gemfile Gemfile.lock ./
 RUN bundle install && \
-    rm -rf "${BUNDLE_PATH}/ruby/*/cache" \
-           "${BUNDLE_PATH}/ruby/*/bundler/gems/*/.git"
-
-# Copy package.json and install Node dependencies
-COPY package.json yarn.lock* ./
-RUN yarn install --no-frozen-lockfile
+    rm -rf "${BUNDLE_PATH}/ruby/*/cache" "${BUNDLE_PATH}/ruby/*/bundler/gems/*/.git"
 
 # =============================================================================
-# STAGE 3: development
+# STAGE 4: development
 # Development image with hot reload and debugging tools.
 # =============================================================================
-FROM dependencies AS development
+FROM dev-gems AS development
 
 ENV RAILS_ENV=development \
-    NODE_ENV=development \
     RAILS_LOG_TO_STDOUT=true
 
-# Install extra dev tools (useful but not required in production)
+# Extra dev tools (not present in production)
 RUN apt-get update -qq && \
     apt-get install -y --no-install-recommends \
-      vim \
+      git \
       less \
-      postgresql-client && \
+      vim \
+      zsh && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy entrypoint and scripts
-COPY docker/entrypoints/entrypoint.sh /usr/local/bin/entrypoint.sh
-COPY docker/scripts/install-system-dependencies.sh /usr/local/bin/install-system-dependencies.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh \
-             /usr/local/bin/install-system-dependencies.sh
+# Oh My Zsh for a nicer `docker compose exec rails zsh` experience (dev only)
+RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended && \
+    echo 'export PATH="/usr/local/bundle/bin:$PATH"' >> /root/.zshrc && \
+    ln -sf /app/.irbrc /root/.irbrc
 
-# Copy application source code
+COPY docker/entrypoints/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
 COPY . .
 
 EXPOSE 3000
@@ -112,65 +98,60 @@ ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0", "-p", "3000"]
 
 # =============================================================================
-# STAGE 4: assets (production - precompile assets)
+# STAGE 5: prod-gems
+# Production gems only (no development/test groups).
 # =============================================================================
-FROM dependencies AS assets
+FROM build AS prod-gems
+
+ENV BUNDLE_WITHOUT="development test" \
+    BUNDLE_DEPLOYMENT=1
+
+COPY .ruby-version Gemfile Gemfile.lock ./
+RUN bundle install && \
+    rm -rf "${BUNDLE_PATH}/ruby/*/cache" "${BUNDLE_PATH}/ruby/*/bundler/gems/*/.git"
+
+# =============================================================================
+# STAGE 6: assets
+# Precompile assets without needing real credentials (Rails dummy key).
+# =============================================================================
+FROM prod-gems AS assets
 
 ENV RAILS_ENV=production \
-    NODE_ENV=production \
     RAILS_LOG_TO_STDOUT=true
 
 COPY . .
 
-RUN bundle exec rails secret > /tmp/secret && \
-    SECRET_KEY_BASE=$(cat /tmp/secret) \
-    ASSETS_PRECOMPILE=1 \
-    bundle exec rails assets:precompile && \
-    rm /tmp/secret
+RUN SECRET_KEY_BASE_DUMMY=1 bundle exec rails assets:precompile
 
 # =============================================================================
-# STAGE 5: production
-# Final production image - minimal, secure, optimized.
+# STAGE 7: production
+# Final production image - minimal, non-root, no build tools.
 # =============================================================================
 FROM base AS production
 
 ENV RAILS_ENV=production \
-    NODE_ENV=production \
     RAILS_LOG_TO_STDOUT=true \
-    RAILS_SERVE_STATIC_FILES=true
+    RAILS_SERVE_STATIC_FILES=true \
+    BUNDLE_WITHOUT="development test" \
+    BUNDLE_DEPLOYMENT=1
 
-# Install runtime-only dependencies
-RUN apt-get update -qq && \
-    apt-get install -y --no-install-recommends \
-      libpq5 \
-      postgresql-client && \
-    rm -rf /var/lib/apt/lists/*
-
-# Install Node.js runtime (required by some production assets)
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
-    apt-get install -y --no-install-recommends nodejs && \
-    rm -rf /var/lib/apt/lists/*
-
-# Create non-root user for security
+# Non-root user
 RUN groupadd --system rails && \
     useradd --system --gid rails --home /app --shell /bin/bash rails
 
 WORKDIR /app
 
-# Copy installed gems from dependencies stage
-COPY --from=dependencies /usr/local/bundle /usr/local/bundle
-
-# Copy precompiled assets
+# Gems (production only) and precompiled assets
+COPY --from=prod-gems /usr/local/bundle /usr/local/bundle
 COPY --from=assets /app/public/assets ./public/assets
 
-# Copy application source code
 COPY --chown=rails:rails . .
 
-# Copy and configure entrypoint
 COPY docker/entrypoints/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh && \
+    mkdir -p tmp/pids log storage && \
+    chown -R rails:rails tmp log storage
 
-# Switch to non-root user
 USER rails
 
 EXPOSE 3000
