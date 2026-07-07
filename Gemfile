@@ -52,6 +52,8 @@ group :development do
   gem "letter_opener_web"
   gem "rack-mini-profiler"
   gem "web-console"
+  gem "better_errors"
+  gem "binding_of_caller"
 end
 
 group :test do
