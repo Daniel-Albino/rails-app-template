@@ -27,10 +27,13 @@ Rails.application.configure do
   config.action_mailer.default_url_options = {
     host: ENV.fetch("ACTION_MAILER_DEFAULT_URL_HOST", "localhost:3000")
   }
+  Rails.application.routes.default_url_options[:host] = ENV.fetch("APP_HOST", "localhost:3000")
 
   # Logs
   config.log_level = ENV.fetch("RAILS_LOG_LEVEL", "debug").to_sym
   config.log_tags = [:request_id]
+  # Do not log Docker healthcheck requests
+  config.silence_healthcheck_path = "/health"
 
   # Active Job
   config.active_job.queue_adapter = :sidekiq

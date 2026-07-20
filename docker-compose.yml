@@ -14,6 +14,9 @@ services:
       context: .
       dockerfile: Dockerfile
       target: development          # Use development stage
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
     image: my_app:development
     restart: unless-stopped
     depends_on:
@@ -54,6 +57,9 @@ services:
       context: .
       dockerfile: Dockerfile
       target: development
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
     image: my_app:development
     restart: unless-stopped
     depends_on:
