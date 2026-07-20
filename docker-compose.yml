@@ -29,8 +29,6 @@ services:
     volumes:
       # Hot reload: mount local source into container
       - .:/app
-      # Persist gems outside app volume (avoid conflicts)
-      - bundle_cache:/usr/local/bundle
     env_file:
       - .env
       - docker/environments/development.env
@@ -72,7 +70,6 @@ services:
     command: bundle exec sidekiq -C config/sidekiq.yml
     volumes:
       - .:/app
-      - bundle_cache:/usr/local/bundle
     env_file:
       - .env
       - docker/environments/development.env
@@ -150,8 +147,6 @@ volumes:
   postgres_data:
     driver: local
   redis_data:
-    driver: local
-  bundle_cache:
     driver: local
 
 # =============================================================================

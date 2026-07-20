@@ -115,12 +115,14 @@ file — no build step, no `node_modules`. If you later need real bundling
 
 ```bash
 docker compose exec rails bundle add <gem>   # updates Gemfile + Gemfile.lock
-docker compose restart rails sidekiq
+docker compose build rails                   # bake the gem into the image
+docker compose up -d rails sidekiq
 ```
 
-Gems live in the `bundle_cache` volume, so no image rebuild is needed in
-development. Rebuild (`docker compose build`) when you want them baked into
-the image.
+Gems live in the image, not in a volume. The `bundle add` above installs into
+the running container so you can try the gem immediately, but that layer is
+discarded when the container is recreated — the rebuild is what makes it
+stick. Layer caching keeps the rebuild fast unless `Gemfile.lock` changed.
 
 ### System packages (vim, htop, ...)
 
